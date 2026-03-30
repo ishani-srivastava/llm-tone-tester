@@ -457,7 +457,7 @@
    <div class="dot-wrap">
      <div class="dot-flashing"></div>
    </div>
-   Sending all 4 tone variations to Gemini Pro...
+   Sending one request to Gemini (all 4 tones)...
  </div>
  <div class="results" id="results">
    <div class="divider"></div>
@@ -562,6 +562,67 @@ function makeTonedPrompt(question, tone) {
  if (tone === "Blunt")
    return `${question} Answer now. Be brief.`;
 }
+/** One user message that asks for all four tone answers in a single API call (saves quota vs. 4 separate requests). */
+function buildMultiTonePrompt(question) {
+ const polite = makeTonedPrompt(question, "Polite");
+ const neutral = makeTonedPrompt(question, "Neutral");
+ const thorough = makeTonedPrompt(question, "Thorough");
+ const blunt = makeTonedPrompt(question, "Blunt");
+ return `You will answer four separate user prompts. Each block is the complete user message for one tone. Answer each independently, as if you only saw that one message.
+
+--- Tone "Polite" (full user message) ---
+${polite}
+
+--- Tone "Neutral" (full user message) ---
+${neutral}
+
+--- Tone "Thorough" (full user message) ---
+${thorough}
+
+--- Tone "Blunt" (full user message) ---
+${blunt}
+
+Respond with ONLY valid JSON. No markdown code fences, no text before or after the JSON. The object must have exactly these keys: "Polite", "Neutral", "Thorough", "Blunt". Each value must be your full answer string for that tone.`;
+}
+function parseJsonFromModelText(text) {
+ let t = text.trim();
+ const fence = /```(?:json)?\s*([\s\S]*?)```/;
+ const m = t.match(fence);
+ if (m) t = m[1].trim();
+ const start = t.indexOf("{");
+ const end = t.lastIndexOf("}");
+ if (start === -1 || end === -1 || end <= start)
+   throw new Error("No JSON object in model response.");
+ t = t.slice(start, end + 1);
+ return JSON.parse(t);
+}
+function parseFourToneJson(text) {
+ let obj;
+ try {
+   obj = parseJsonFromModelText(text);
+ } catch (e) {
+   throw new Error("Could not parse the model response as JSON. Try running again.");
+ }
+ const out = {};
+ for (const tone of TONES) {
+   const v = obj[tone];
+   if (typeof v !== "string" || !String(v).trim())
+     throw new Error(`Missing or empty "${tone}" in the model JSON.`);
+   out[tone] = String(v).trim();
+ }
+ return out;
+}
+function sleep(ms) {
+ return new Promise(r => setTimeout(r, ms));
+}
+function parseRetryDelayMs(message) {
+ const m = (message || "").match(/retry in ([\d.]+)s/i);
+ return m ? Math.ceil(parseFloat(m[1]) * 1000) + 400 : null;
+}
+function isRetryableQuotaError(status, message) {
+ const msg = message || "";
+ return status === 429 || /quota|rate limit|resource exhausted|too many requests/i.test(msg);
+}
 function similarity(a, b) {
  const longer = a.length > b.length ? a : b;
  const shorter = a.length > b.length ? b : a;
@@ -612,23 +673,44 @@ function countSyllables(word) {
  const m = word.match(/[aeiouy]{1,2}/g);
  return m ? m.length : 1;
 }
-async function callGemini(apiKey, prompt) {
- const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
+function geminiGenerateUrl(apiKey) {
+ return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+}
+/** Single request returning JSON with all four tone answers. Retries on rate/quota with server-suggested or exponential backoff. */
+async function callGeminiAllTones(apiKey, question) {
+ const prompt = buildMultiTonePrompt(question);
  const body = {
    contents: [{ parts: [{ text: prompt }] }],
-   generationConfig: { maxOutputTokens: 2048 }
+   generationConfig: {
+     maxOutputTokens: 8192,
+     temperature: 0.2
+   }
  };
- const res = await fetch(url, {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify(body)
- });
- if (!res.ok) {
-   const err = await res.json();
-   throw new Error(err.error?.message || "API error");
+ let lastMessage = "API error";
+ for (let attempt = 0; attempt < 8; attempt++) {
+   const res = await fetch(geminiGenerateUrl(apiKey), {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(body)
+   });
+   const data = await res.json().catch(() => ({}));
+   if (res.ok) {
+     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+     if (!text || !String(text).trim())
+       throw new Error("Empty response from Gemini. Try again.");
+     return parseFourToneJson(text);
+   }
+   lastMessage = data.error?.message || `HTTP ${res.status}`;
+   if (isRetryableQuotaError(res.status, lastMessage) && attempt < 7) {
+     const suggested = parseRetryDelayMs(lastMessage);
+     const backoff = suggested ?? Math.min(90000, 2500 * Math.pow(2, attempt));
+     await sleep(backoff);
+     continue;
+   }
+   throw new Error(lastMessage);
  }
- const data = await res.json();
- return data.candidates[0].content.parts[0].text;
+ throw new Error(lastMessage);
 }
 async function runAnalysis() {
  const apiKey = document.getElementById("api-key").value.trim();
@@ -641,10 +723,11 @@ async function runAnalysis() {
  document.getElementById("spinner").classList.add("active");
  document.getElementById("results").classList.remove("active");
  try {
+   const answers = await callGeminiAllTones(apiKey, question);
    const results = {};
    for (const tone of TONES) {
      const prompt = makeTonedPrompt(question, tone);
-     const response = await callGemini(apiKey, prompt);
+     const response = answers[tone];
      results[tone] = {
        prompt,
        response,
@@ -659,7 +742,11 @@ async function runAnalysis() {
    renderInsights(results);
    document.getElementById("results").classList.add("active");
  } catch (e) {
-   showError("Error: " + e.message + " — double-check your API key and try again.");
+   const msg = e.message || String(e);
+   const quotaHint = /quota|rate limit|resource exhausted|429/i.test(msg)
+     ? " The app waits and retries automatically; if this still appears, pause a minute or check usage at https://ai.dev/rate-limit"
+     : " — double-check your API key and try again.";
+   showError("Error: " + msg + quotaHint);
  }
  document.getElementById("run-btn").disabled = false;
  document.getElementById("spinner").classList.remove("active");
