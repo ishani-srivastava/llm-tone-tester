@@ -165,6 +165,11 @@
  .metric-item { margin-bottom: 8px; }
  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
  .metric-value { font-size: 20px; font-weight: 600; }
+/* Match Reading Grade explainer bands (1–6, 7–10, 11–14, 15+). */
+.metric-grade-easy { color: var(--green); }
+.metric-grade-medium { color: var(--blue); }
+.metric-grade-hard { color: var(--amber); }
+.metric-grade-expert { color: var(--red); }
  .grade-explainer {
    background: var(--surface);
    border: 0.5px solid var(--border);
@@ -422,7 +427,7 @@
  <div class="error-box" id="error-box"></div>
  <div class="spinner" id="spinner">
    <div class="dot-wrap"><div class="dot-flashing"></div></div>
-   Sending all 4 tone variations to Gemini Pro...
+  Sending one request for all 4 tones...
  </div>
  <div class="results" id="results">
    <div class="divider"></div>
@@ -496,6 +501,7 @@
 const TONES = ["Polite", "Neutral", "Commanding", "Blunt"];
 const TONE_COLORS = { Polite:"tone-polite", Neutral:"tone-neutral", Commanding:"tone-commanding", Blunt:"tone-blunt" };
 const TONE_CSS = { Polite:"polite", Neutral:"neutral", Commanding:"commanding", Blunt:"blunt" };
+let RATE_LIMIT_COOLDOWN_UNTIL_MS = 0;
 function setSample(q) { document.getElementById("question").value = q; }
 function clearAll() {
  document.getElementById("question").value = "";
@@ -507,6 +513,20 @@ function makeTonedPrompt(question, tone) {
  if (tone === "Neutral") return question;
  if (tone === "Commanding") return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
  if (tone === "Blunt") return `${question} Answer now. Be brief.`;
+}
+function buildMultiTonePrompt(question) {
+  const blocks = TONES.map(tone => `--- Tone: ${tone} ---\n${makeTonedPrompt(question, tone)}`).join("\n\n");
+  const keys = TONES.map(t => `"${t}"`).join(", ");
+  return `You will answer ${TONES.length} separate user prompts.
+
+Each block below is the complete user message for one tone. Answer each block independently.
+
+${blocks}
+
+Respond with ONLY valid JSON (no markdown code fences, no extra text).
+The JSON object must contain exactly these keys: ${keys}.
+Each value must be the full answer text for that tone.
+Write each answer as 3-8 sentences (avoid unnecessary padding).`;
 }
 function similarity(a, b) {
  const longer = a.length > b.length ? a : b;
@@ -534,6 +554,13 @@ function readingGrade(text) {
  const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
  const fkgl = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
  return Math.max(1, Math.round(fkgl * 10) / 10);
+}
+/* CSS class for metric reading grade — same bands as explainer (1–6, 7–10, 11–14, 15+). */
+function gradeBandMetricClass(grade) {
+  if (grade <= 6) return "metric-grade-easy";
+  if (grade <= 10) return "metric-grade-medium";
+  if (grade < 15) return "metric-grade-hard";
+  return "metric-grade-expert";
 }
 function countSyllables(word) {
  word = word.toLowerCase().replace(/[^a-z]/g, "");
@@ -564,6 +591,96 @@ async function callGemini(apiKey, prompt) {
  if (!text) throw new Error("Empty response from Gemini — try again.");
  return text;
 }
+
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
+const FETCH_TIMEOUT_MS = 120000;
+const MAX_429_RETRIES = 2;
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function geminiGenerateUrl(apiKey) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+}
+function parseRetryInSeconds(message) {
+  const m = (message || "").match(/retry in ([\d.]+)s/i);
+  return m ? parseFloat(m[1]) : null;
+}
+function isKeyOrAuthError(status, message) {
+  const msg = message || "";
+  if (status === 401 || status === 403) return true;
+  return /API key expired|invalid API key|API_KEY_INVALID|PERMISSION_DENIED|invalid api key|permission denied/i.test(msg);
+}
+function parseJsonFromModelText(text) {
+  let t = String(text || "").trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Could not find JSON in Gemini response.");
+  t = t.slice(start, end + 1);
+  return JSON.parse(t);
+}
+function parseToneJson(text, expectedTones) {
+  const obj = parseJsonFromModelText(text);
+  const out = {};
+  for (const tone of expectedTones) {
+    const v = obj[tone];
+    if (typeof v !== "string" || !v.trim()) throw new Error(`Missing or empty "${tone}" in Gemini JSON response.`);
+    out[tone] = v.trim();
+  }
+  return out;
+}
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+async function callGeminiAllTones(apiKey, question) {
+  const prompt = buildMultiTonePrompt(question);
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
+  };
+  let lastMessage = "API error";
+  for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
+    let res;
+    try {
+      res = await fetchWithTimeout(
+        geminiGenerateUrl(apiKey),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+        FETCH_TIMEOUT_MS
+      );
+    } catch (e) {
+      if (e && e.name === "AbortError") {
+        throw new Error(`Request timed out after ${Math.round(FETCH_TIMEOUT_MS / 1000)}s. Try a shorter question.`);
+      }
+      throw e;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text || !String(text).trim()) throw new Error("Empty response from Gemini — try again.");
+      return parseToneJson(text, TONES);
+    }
+    lastMessage = data.error?.message || `HTTP ${res.status}`;
+    if (isKeyOrAuthError(res.status, lastMessage)) throw new Error(lastMessage);
+    if (res.status === 429) {
+      const retrySec = parseRetryInSeconds(lastMessage);
+      if (attempt < MAX_429_RETRIES) {
+        await sleep((retrySec ? retrySec * 1000 : 30000) + 500);
+        continue;
+      }
+      const waitStr = retrySec ? retrySec.toFixed(1) : "30-60";
+      const cooldownMs = retrySec ? (retrySec * 1000 + 1500) : 60000;
+      RATE_LIMIT_COOLDOWN_UNTIL_MS = Date.now() + cooldownMs;
+      throw new Error(`Rate limit hit — wait ${waitStr} seconds and try again. Free tier allows only a few requests per minute.`);
+    }
+    throw new Error(lastMessage);
+  }
+  throw new Error(lastMessage);
+}
 async function runAnalysis() {
  const apiKey = document.getElementById("api-key").value.trim();
  const question = document.getElementById("question").value.trim();
@@ -571,23 +688,36 @@ async function runAnalysis() {
  errBox.style.display = "none";
  if (!apiKey) { showError("Please paste your Gemini API key above."); return; }
  if (!question) { showError("Please enter a question."); return; }
+  const now = Date.now();
+  if (now < RATE_LIMIT_COOLDOWN_UNTIL_MS) {
+    const sec = Math.max(1, Math.ceil((RATE_LIMIT_COOLDOWN_UNTIL_MS - now) / 1000));
+    showError(`Error: Rate limit hit — wait ${sec} seconds and try again.`);
+    return;
+  }
  document.getElementById("run-btn").disabled = true;
  document.getElementById("spinner").classList.add("active");
  document.getElementById("results").classList.remove("active");
  try {
-   const results = {};
-   for (const tone of TONES) {
-     const prompt = makeTonedPrompt(question, tone);
-     const response = await callGemini(apiKey, prompt);
-     results[tone] = { prompt, response, words: wordCount(response), grade: readingGrade(response), sentences: sentenceCount(response) };
-   }
+    const answers = await callGeminiAllTones(apiKey, question);
+    const results = {};
+    for (const tone of TONES) {
+      const prompt = makeTonedPrompt(question, tone);
+      const response = answers[tone];
+      results[tone] = {
+        prompt,
+        response,
+        words: wordCount(response),
+        grade: readingGrade(response),
+        sentences: sentenceCount(response)
+      };
+    }
    renderMetrics(results);
    renderSimilarity(results);
    renderResponses(results);
    renderFindings(results);
    document.getElementById("results").classList.add("active");
  } catch (e) {
-   showError("Error: " + e.message + " — double-check your API key and try again.");
+    showError("Error: " + (e && e.message ? e.message : String(e)));
  }
  document.getElementById("run-btn").disabled = false;
  document.getElementById("spinner").classList.remove("active");
@@ -603,7 +733,7 @@ function renderMetrics(results) {
    <div class="metric-card">
      <div class="metric-tone ${TONE_COLORS[tone]}">${tone}</div>
      <div class="metric-item"><div class="metric-label">Word count</div><div class="metric-value">${results[tone].words}</div></div>
-     <div class="metric-item"><div class="metric-label">Reading grade</div><div class="metric-value">${results[tone].grade}</div></div>
+    <div class="metric-item"><div class="metric-label">Reading grade</div><div class="metric-value ${gradeBandMetricClass(results[tone].grade)}">${results[tone].grade}</div></div>
      <div class="metric-item"><div class="metric-label">Sentences</div><div class="metric-value">${results[tone].sentences}</div></div>
    </div>`).join("");
 }
