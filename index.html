@@ -387,7 +387,7 @@ function countSyllables(word) {
   const m = word.match(/[aeiouy]{1,2}/g);
   return m ? m.length : 1;
 }
- 
+  
 async function callGemini(apiKey, prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const body = {
