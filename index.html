@@ -251,28 +251,33 @@
  .sim-row-label { font-size: 12px; color: var(--text); flex-shrink: 0; }
  .sim-detail { text-align: right; }
  .sim-pct { font-weight: 700; font-size: 14px; display: block; }
- .sim-verdict { font-size: 10px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; display: block; margin-top: 1px; }
  .sim-high .sim-pct { color: var(--green); }
- .sim-high .sim-verdict { color: var(--green); }
  .sim-mid .sim-pct { color: var(--amber); }
- .sim-mid .sim-verdict { color: var(--amber); }
  .sim-low .sim-pct { color: var(--red); }
- .sim-low .sim-verdict { color: var(--red); }
  
  /* Similarity legend */
  .sim-legend {
    display: flex;
-   gap: 16px;
-   flex-wrap: wrap;
+   flex-direction: column;
+   gap: 10px;
    margin-bottom: 16px;
-   padding: 12px 16px;
+   padding: 14px 16px;
    background: var(--surface);
    border: 0.5px solid var(--border);
    border-radius: var(--radius);
    font-size: 12px;
+   line-height: 1.45;
  }
- .sim-legend-item { display: flex; align-items: center; gap: 6px; }
- .sim-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+ .sim-legend-item {
+   display: grid;
+   grid-template-columns: 10px 5.5rem 1fr;
+   align-items: start;
+   column-gap: 10px;
+   row-gap: 2px;
+ }
+ .sim-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+ .sim-legend-range { font-weight: 600; white-space: nowrap; }
+ .sim-legend-desc { color: var(--muted); }
  
  .response-section { margin-bottom: 10px; }
  .response-toggle {
@@ -322,8 +327,71 @@
    border-radius: var(--radius);
    padding: 18px 22px;
  }
- .insight-box h3 { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
- .insight-item { font-size: 14px; line-height: 1.7; color: #1e3a8a; margin-bottom: 6px; padding-left: 16px; position: relative; }
+ .insight-box h3 { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 12px; }
+ .findings-visual {
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 16px;
+   margin-bottom: 20px;
+ }
+ @media(max-width:640px){ .findings-visual{ grid-template-columns: 1fr; } }
+ .findings-chart-block {
+   background: var(--surface);
+   border: 0.5px solid rgba(37,99,235,.15);
+   border-radius: 8px;
+   padding: 14px 16px;
+ }
+ .findings-chart-title {
+   font-size: 11px;
+   font-weight: 700;
+   letter-spacing: .06em;
+   text-transform: uppercase;
+   color: var(--muted);
+   margin-bottom: 12px;
+ }
+ .findings-bar-row {
+   display: grid;
+   grid-template-columns: 4.5rem 1fr auto;
+   align-items: center;
+   gap: 8px;
+   margin-bottom: 8px;
+   font-size: 12px;
+ }
+ .findings-bar-row:last-child { margin-bottom: 0; }
+ .findings-bar-label { color: var(--text); font-weight: 500; }
+ .findings-bar-track {
+   height: 10px;
+   background: rgba(37,99,235,.08);
+   border-radius: 5px;
+   overflow: hidden;
+ }
+ .findings-bar-fill { height: 100%; border-radius: 5px; transition: width .35s ease; min-width: 2px; }
+ .findings-bar-fill.polite { background: var(--green); }
+ .findings-bar-fill.neutral { background: var(--blue); }
+ .findings-bar-fill.commanding { background: var(--amber); }
+ .findings-bar-fill.blunt { background: var(--red); }
+ .findings-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; white-space: nowrap; }
+ .findings-summary {
+   font-size: 13px;
+   color: #1e40af;
+   line-height: 1.55;
+   padding: 12px 14px;
+   background: rgba(255,255,255,.65);
+   border-radius: 8px;
+   border: 0.5px solid rgba(37,99,235,.12);
+   margin-bottom: 16px;
+ }
+ .findings-summary strong { color: #1e3a8a; }
+ .insight-list-title {
+   font-size: 11px;
+   font-weight: 700;
+   letter-spacing: .06em;
+   text-transform: uppercase;
+   color: var(--muted);
+   margin-bottom: 8px;
+ }
+ .insight-item { font-size: 14px; line-height: 1.65; color: #1e3a8a; margin-bottom: 8px; padding-left: 16px; position: relative; }
+ .insight-item:last-child { margin-bottom: 0; }
  .insight-item::before { content: "→"; position: absolute; left: 0; color: var(--blue); font-size: 12px; top: 2px; }
  .error-box {
    background: var(--red-light);
@@ -423,18 +491,18 @@
    <div class="sim-legend">
      <div class="sim-legend-item">
        <div class="sim-dot" style="background:var(--green)"></div>
-       <span style="color:var(--green);font-weight:600">75–100%</span>
-       <span style="color:var(--muted)">Nearly identical — tone had little effect</span>
+       <span class="sim-legend-range" style="color:var(--green)">75–100%</span>
+       <span class="sim-legend-desc">Nearly identical — tone had little effect</span>
      </div>
      <div class="sim-legend-item">
        <div class="sim-dot" style="background:var(--amber)"></div>
-       <span style="color:var(--amber);font-weight:600">50–74%</span>
-       <span style="color:var(--muted)">Noticeable differences — tone changed the answer somewhat</span>
+       <span class="sim-legend-range" style="color:var(--amber)">50–74%</span>
+       <span class="sim-legend-desc">Noticeable differences — tone changed the answer somewhat</span>
      </div>
      <div class="sim-legend-item">
        <div class="sim-dot" style="background:var(--red)"></div>
-       <span style="color:var(--red);font-weight:600">0–49%</span>
-       <span style="color:var(--muted)">Very different — tone had a big impact</span>
+       <span class="sim-legend-range" style="color:var(--red)">0–49%</span>
+       <span class="sim-legend-desc">Very different — tone had a big impact</span>
      </div>
    </div>
  
@@ -446,6 +514,9 @@
    <div class="section-label">What does this show?</div>
    <div class="insight-box">
      <h3>Findings for this question</h3>
+     <div class="findings-visual" id="findings-visual"></div>
+     <div id="findings-summary"></div>
+     <div class="insight-list-title">Takeaways</div>
      <div id="insights"></div>
    </div>
  </div>
@@ -495,9 +566,9 @@ function similarity(a, b) {
  return Math.round((2 * matches) / (a.length + b.length) * 100);
 }
 function simVerdict(score) {
- if (score >= 75) return { label: "Nearly identical", cls: "sim-high" };
- if (score >= 50) return { label: "Some variation", cls: "sim-mid" };
- return { label: "Very different", cls: "sim-low" };
+ if (score >= 75) return "sim-high";
+ if (score >= 50) return "sim-mid";
+ return "sim-low";
 }
 function wordCount(text) {
  return text.trim().split(/\s+/).length;
@@ -605,13 +676,12 @@ function renderSimilarity(results) {
      ${TONES.map(toneB => {
        if (toneA === toneB) return `<div class="sim-row"><span class="sim-row-label">${toneB}</span><span style="color:var(--muted);font-size:13px">—</span></div>`;
        const score = similarity(results[toneA].response, results[toneB].response);
-       const v = simVerdict(score);
+       const vCls = simVerdict(score);
        return `
-         <div class="sim-row ${v.cls}">
+         <div class="sim-row ${vCls}">
            <span class="sim-row-label">${toneB}</span>
            <span class="sim-detail">
              <span class="sim-pct">${score}%</span>
-             <span class="sim-verdict">${v.label}</span>
            </span>
          </div>`;
      }).join("")}
@@ -642,9 +712,21 @@ function toggleResponse(btn) {
 function escHtml(str) {
  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+const TONE_BAR_CLASS = { Polite: "polite", Neutral: "neutral", Commanding: "commanding", Blunt: "blunt" };
+function findingsBarRow(label, value, maxVal, valueSuffix) {
+ const pct = maxVal > 0 ? Math.round((value / maxVal) * 100) : 0;
+ return `
+   <div class="findings-bar-row">
+     <span class="findings-bar-label">${label}</span>
+     <div class="findings-bar-track"><div class="findings-bar-fill ${TONE_BAR_CLASS[label]}" style="width:${pct}%"></div></div>
+     <span class="findings-bar-val">${value}${valueSuffix}</span>
+   </div>`;
+}
 function renderInsights(results) {
  const words = Object.fromEntries(TONES.map(t => [t, results[t].words]));
  const grades = Object.fromEntries(TONES.map(t => [t, results[t].grade]));
+ const maxWords = Math.max(...TONES.map(t => words[t]), 1);
+ const maxGrade = Math.max(...TONES.map(t => grades[t]), 1);
  const mostWords = TONES.reduce((a,b) => words[a] > words[b] ? a : b);
  const leastWords = TONES.reduce((a,b) => words[a] < words[b] ? a : b);
  const highestGrade = TONES.reduce((a,b) => grades[a] > grades[b] ? a : b);
@@ -652,12 +734,28 @@ function renderInsights(results) {
  const polNeuSim = similarity(results["Polite"].response, results["Neutral"].response);
  const polBluSim = similarity(results["Polite"].response, results["Blunt"].response);
  const supportsHypothesis = words["Polite"] > words["Blunt"];
+ const wordDiff = words[mostWords] - words[leastWords];
+ document.getElementById("findings-visual").innerHTML = `
+     <div class="findings-chart-block">
+       <div class="findings-chart-title">Response length (words)</div>
+       ${TONES.map(t => findingsBarRow(t, words[t], maxWords, " words")).join("")}
+     </div>
+     <div class="findings-chart-block">
+       <div class="findings-chart-title">Reading complexity (grade)</div>
+       ${TONES.map(t => findingsBarRow(t, grades[t], maxGrade, "")).join("")}
+     </div>
+ `;
+ document.getElementById("findings-summary").innerHTML = `
+   <div class="findings-summary">
+     At a glance: <strong>${mostWords}</strong> used the most words (${words[mostWords]}); <strong>${leastWords}</strong> the fewest (${words[leastWords]}). Reading level was highest for <strong>${highestGrade}</strong> (grade ${grades[highestGrade]}) and lowest for <strong>${lowestGrade}</strong> (grade ${grades[lowestGrade]}). Polite vs. neutral similarity was <strong>${polNeuSim}%</strong>; polite vs. blunt was <strong>${polBluSim}%</strong>.
+   </div>
+ `;
  const insights = [
-   `The <strong>${mostWords}</strong> tone produced the longest response (${words[mostWords]} words), while <strong>${leastWords}</strong> produced the shortest (${words[leastWords]} words) — a difference of ${words[mostWords] - words[leastWords]} words.`,
-   `The <strong>${highestGrade}</strong> tone produced the most complex response (grade ${grades[highestGrade]}), while <strong>${lowestGrade}</strong> was the most readable (grade ${grades[lowestGrade]}).`,
-   `Polite vs. Neutral responses were ${polNeuSim >= 75 ? '<strong>nearly identical</strong>' : polNeuSim >= 50 ? '<strong>somewhat different</strong>' : '<strong>very different</strong>'} (${polNeuSim}%) — ${polNeuSim > 80 ? "suggesting tone had minimal effect on the substance of the answer" : "suggesting tone meaningfully changed what was said, not just how much"}.`,
-   `Polite vs. Blunt responses were ${polBluSim >= 75 ? '<strong>nearly identical</strong>' : polBluSim >= 50 ? '<strong>somewhat different</strong>' : '<strong>very different</strong>'} (${polBluSim}%) — this is the largest tone contrast tested.`,
-   `These results <strong>${supportsHypothesis ? "suggest" : "don't clearly show"}</strong> that polite tones elicit longer, more thorough responses than blunt ones.`
+   `Length spread: <strong>${wordDiff}</strong> words between the longest (${mostWords}) and shortest (${leastWords}) tone — compare the bars above.`,
+   `Complexity spread: reading grade ranges from <strong>${grades[lowestGrade]}</strong> (${lowestGrade}) to <strong>${grades[highestGrade]}</strong> (${highestGrade}).`,
+   `When tone is subtle (Polite vs. Neutral), overlap is <strong>${polNeuSim}%</strong> — ${polNeuSim >= 75 ? "substance stayed similar." : polNeuSim >= 50 ? "you see moderate wording or emphasis shifts." : "content diverged noticeably."}`,
+   `When tone is extreme (Polite vs. Blunt), overlap is <strong>${polBluSim}%</strong> — the strongest contrast in this run.`,
+   `Hypothesis check: polite longer than blunt? <strong>${supportsHypothesis ? "Yes — polite had more words this time." : "Not here — blunt matched or exceeded polite length."}</strong>`
  ];
  document.getElementById("insights").innerHTML = insights
    .map(i => `<div class="insight-item">${i}</div>`)
