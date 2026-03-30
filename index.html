@@ -40,6 +40,19 @@
 
    --red-light: #fef2f2;
 
+  /* Tone colors (kept distinct from reading-grade colors: --green/--blue/--amber/--red). */
+  --tone-polite: #0e7490;
+  --tone-polite-light: #ccfbf1;
+
+  --tone-neutral: #3730a3;
+  --tone-neutral-light: #eef2ff;
+
+  --tone-articulate: #334155;
+  --tone-articulate-light: #e2e8f0;
+
+  --tone-blunt: #92400e;
+  --tone-blunt-light: #ffedd5;
+
    --radius: 10px;
 
  }
@@ -318,13 +331,13 @@
 
  }
 
- .tone-polite { background: var(--green-light); color: var(--green); }
+.tone-polite { background: var(--tone-polite-light); color: var(--tone-polite); }
 
- .tone-neutral { background: var(--blue-light); color: var(--blue); }
+.tone-neutral { background: var(--tone-neutral-light); color: var(--tone-neutral); }
 
- .tone-commanding { background: var(--amber-light); color: var(--amber); }
+.tone-articulate { background: var(--tone-articulate-light); color: var(--tone-articulate); }
 
- .tone-blunt { background: var(--red-light); color: var(--red); }
+.tone-blunt { background: var(--tone-blunt-light); color: var(--tone-blunt); }
 
  .metric-item { margin-bottom: 8px; }
 
@@ -712,21 +725,21 @@
 
  .bar-val-outside { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
 
- .bar-polite .bar-tone-label { color: var(--green); }
+.bar-polite .bar-tone-label { color: var(--tone-polite); }
 
- .bar-polite .bar-fill { background: var(--green); }
+.bar-polite .bar-fill { background: var(--tone-polite); }
 
- .bar-neutral .bar-tone-label { color: var(--blue); }
+.bar-neutral .bar-tone-label { color: var(--tone-neutral); }
 
- .bar-neutral .bar-fill { background: var(--blue); }
+.bar-neutral .bar-fill { background: var(--tone-neutral); }
 
- .bar-commanding .bar-tone-label { color: var(--amber); }
+.bar-articulate .bar-tone-label { color: var(--tone-articulate); }
 
- .bar-commanding .bar-fill { background: var(--amber); }
+.bar-articulate .bar-fill { background: var(--tone-articulate); }
 
- .bar-blunt .bar-tone-label { color: var(--red); }
+.bar-blunt .bar-tone-label { color: var(--tone-blunt); }
 
- .bar-blunt .bar-fill { background: var(--red); }
+.bar-blunt .bar-fill { background: var(--tone-blunt); }
 
  .findings-summary {
 
@@ -998,11 +1011,11 @@
 
 <script>
 
-const TONES = ["Polite", "Neutral", "Commanding", "Blunt"];
+const TONES = ["Polite", "Neutral", "Articulate", "Blunt"];
 
-const TONE_COLORS = { Polite:"tone-polite", Neutral:"tone-neutral", Commanding:"tone-commanding", Blunt:"tone-blunt" };
+const TONE_COLORS = { Polite:"tone-polite", Neutral:"tone-neutral", Articulate:"tone-articulate", Blunt:"tone-blunt" };
 
-const TONE_CSS = { Polite:"polite", Neutral:"neutral", Commanding:"commanding", Blunt:"blunt" };
+const TONE_CSS = { Polite:"polite", Neutral:"neutral", Articulate:"articulate", Blunt:"blunt" };
 
 let RATE_LIMIT_COOLDOWN_UNTIL_MS = 0;
 
@@ -1024,7 +1037,7 @@ function makeTonedPrompt(question, tone) {
 
  if (tone === "Neutral") return question;
 
- if (tone === "Commanding") return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
+ if (tone === "Articulate") return `Please answer the following question clearly and coherently. ${question} Give a well-structured response with the key points explained.`;
 
  if (tone === "Blunt") return `${question} Answer now. Be brief.`;
 
