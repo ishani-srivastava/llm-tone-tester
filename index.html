@@ -1,780 +1,1649 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Tone Tester — Ishani Srivastava</title>
-<style>
-:root {
-  --bg: #f9f9f8;
-  --surface: #ffffff;
-  --border: rgba(0,0,0,0.1);
-  --text: #1a1a1a;
-  --muted: #6b6b6b;
-  --blue: #2563eb;
-  --blue-light: #eff6ff;
-  --green: #16a34a;
-  --green-light: #f0fdf4;
-  --amber: #d97706;
-  --amber-light: #fffbeb;
-  --red: #dc2626;
-  --red-light: #fef2f2;
-  --purple: #7c3aed;
-  --purple-light: #f5f3ff;
-  /* Tone chips (distinct from reading-grade bands: green/blue/amber/red) */
-  --tone-polite: #4f46e5;
-  --tone-polite-light: #eef2ff;
-  --tone-neutral: #475569;
-  --tone-neutral-light: #f1f5f9;
-  --tone-thorough: #0f766e;
-  --tone-thorough-light: #ccfbf1;
-  --tone-blunt: #a21caf;
-  --tone-blunt-light: #fae8ff;
-  --radius: 10px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 40px 20px;
-}
-.container { max-width: 900px; margin: 0 auto; }
-.header { margin-bottom: 32px; }
-.header h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
-.header p { font-size: 14px; color: var(--muted); line-height: 1.6; }
-.tag {
-  display: inline-block;
-  background: var(--blue-light);
-  color: var(--blue);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 20px;
-  margin-bottom: 12px;
-  letter-spacing: .03em;
-}
-.card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px;
-  margin-bottom: 16px;
-}
-.card-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  margin-bottom: 12px;
-}
-label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
-input[type="password"], textarea {
-  width: 100%;
-  border: 0.5px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--text);
-  background: var(--bg);
-  outline: none;
-  transition: border-color .15s;
-}
-input[type="password"]:focus, textarea:focus { border-color: var(--blue); }
-textarea { min-height: 100px; resize: vertical; }
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: opacity .15s, transform .1s;
-}
-.btn:active { transform: scale(0.98); }
-.btn-primary { background: var(--blue); color: white; }
-.btn-primary:hover { opacity: .88; }
-.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
-.btn-ghost {
-  background: transparent;
-  border: 0.5px solid var(--border);
-  color: var(--muted);
-}
-.btn-ghost:hover { background: var(--bg); }
-.btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-.samples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-.sample-pill {
-  padding: 5px 14px;
-  border-radius: 20px;
-  border: 0.5px solid var(--border);
-  background: transparent;
-  font-size: 12px;
-  color: var(--muted);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .12s, color .12s;
-}
-.sample-pill:hover { background: var(--surface); color: var(--text); }
-.spinner {
-  display: none;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--muted);
-  padding: 16px 0;
-}
-.spinner.active { display: flex; }
-.dot-flashing {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--blue);
-  animation: dotFlash 1s infinite alternate;
-}
-.dot-flashing::before, .dot-flashing::after {
-  content: '';
-  display: inline-block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--blue);
-  position: absolute;
-  animation: dotFlash 1s infinite alternate;
-}
-.dot-flashing::before { left: -12px; animation-delay: -.2s; }
-.dot-flashing::after { left: 12px; animation-delay: .2s; }
-.dot-wrap { position: relative; width: 32px; height: 8px; }
-@keyframes dotFlash { 0%{opacity:.2} 100%{opacity:1} }
-.results { display: none; }
-.results.active { display: block; }
-.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-@media(max-width:600px){ .metrics-grid{grid-template-columns:repeat(2,1fr);} }
-.metric-card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.metric-tone {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  display: inline-block;
-}
-.tone-polite { background: var(--tone-polite-light); color: var(--tone-polite); }
-.tone-neutral { background: var(--tone-neutral-light); color: var(--tone-neutral); }
-.tone-thorough { background: var(--tone-thorough-light); color: var(--tone-thorough); }
-.tone-blunt { background: var(--tone-blunt-light); color: var(--tone-blunt); }
-.metric-item { margin-bottom: 8px; }
-.metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-.metric-value { font-size: 20px; font-weight: 600; }
-/* Match reading-grade explainer bands (1–6, 7–10, 11–14, 15+) */
-.metric-grade-easy { color: var(--green); }
-.metric-grade-medium { color: var(--blue); }
-.metric-grade-hard { color: var(--amber); }
-.metric-grade-expert { color: var(--red); }
-/* Reading grade explainer */
-.grade-explainer {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px;
-  margin-top: 12px;
-}
-.grade-explainer-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.grade-explainer-subtitle {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-.grade-scale {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-@media(max-width:600px){ .grade-scale{grid-template-columns:repeat(2,1fr);} }
-.grade-band {
-  border-radius: 8px;
-  padding: 12px 14px;
-  position: relative;
-}
-.grade-band-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.grade-band-range {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.grade-band-example {
-  font-size: 11px;
-  line-height: 1.4;
-  opacity: .8;
-}
-.band-easy { background: var(--green-light); color: var(--green); }
-.band-easy .grade-band-range { color: var(--green); }
-.band-medium { background: var(--blue-light); color: var(--blue); }
-.band-medium .grade-band-range { color: var(--blue); }
-.band-hard { background: var(--amber-light); color: var(--amber); }
-.band-hard .grade-band-range { color: var(--amber); }
-.band-expert { background: var(--red-light); color: var(--red); }
-.band-expert .grade-band-range { color: var(--red); }
-/* Similarity cards */
-.sim-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
-@media(max-width:600px){ .sim-grid{grid-template-columns:repeat(2,1fr);} }
-.sim-card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.sim-card h4 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); }
-.sim-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  font-size: 13px;
-  padding: 6px 0;
-  border-bottom: 0.5px solid var(--border);
-  gap: 6px;
-}
-.sim-row:last-child { border-bottom: none; }
-.sim-row-label { font-size: 12px; color: var(--text); flex-shrink: 0; }
-.sim-detail { text-align: right; }
-.sim-pct { font-weight: 700; font-size: 14px; display: block; }
-.sim-high .sim-pct { color: var(--green); }
-.sim-mid .sim-pct { color: var(--amber); }
-.sim-low .sim-pct { color: var(--red); }
-/* Similarity legend */
-.sim-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 12px;
-  line-height: 1.45;
-}
-.sim-legend-item {
-  display: grid;
-  grid-template-columns: 10px 5.5rem 1fr;
-  align-items: start;
-  column-gap: 10px;
-  row-gap: 2px;
-}
-.sim-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-.sim-legend-range { font-weight: 600; white-space: nowrap; }
-.sim-legend-desc { color: var(--muted); }
-.response-section { margin-bottom: 10px; }
-.response-toggle {
-  width: 100%;
-  text-align: left;
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: inherit;
-  color: var(--text);
-  transition: background .12s;
-}
-.response-toggle:hover { background: var(--bg); }
-.response-toggle .arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
-.response-toggle.open .arrow { transform: rotate(180deg); }
-.response-body {
-  display: none;
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-  padding: 16px 18px;
-}
-.response-body.open { display: block; }
-.prompt-box {
-  background: var(--bg);
-  border: 0.5px solid var(--border);
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 12px;
-  line-height: 1.6;
-}
-.prompt-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
-.response-text { font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
-.insight-box {
-  background: var(--blue-light);
-  border: 0.5px solid rgba(37,99,235,.2);
-  border-radius: var(--radius);
-  padding: 18px 22px;
-}
-.insight-box h3 { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 12px; }
-.findings-visual {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-@media(max-width:640px){ .findings-visual{ grid-template-columns: 1fr; } }
-.findings-chart-block {
-  background: var(--surface);
-  border: 0.5px solid rgba(37,99,235,.15);
-  border-radius: 8px;
-  padding: 14px 16px;
-}
-.findings-chart-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 12px;
-}
-.findings-bar-row {
-  display: grid;
-  grid-template-columns: 4.5rem 1fr auto;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-.findings-bar-row:last-child { margin-bottom: 0; }
-.findings-bar-label { color: var(--text); font-weight: 500; }
-.findings-bar-track {
-  height: 10px;
-  background: rgba(37,99,235,.08);
-  border-radius: 5px;
-  overflow: hidden;
-}
-.findings-bar-fill { height: 100%; border-radius: 5px; transition: width .35s ease; min-width: 2px; }
-.findings-bar-fill.polite { background: var(--tone-polite); }
-.findings-bar-fill.neutral { background: var(--tone-neutral); }
-.findings-bar-fill.thorough { background: var(--tone-thorough); }
-.findings-bar-fill.blunt { background: var(--tone-blunt); }
-.findings-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.findings-summary {
-  font-size: 13px;
-  color: #1e40af;
-  line-height: 1.55;
-  padding: 12px 14px;
-  background: rgba(255,255,255,.65);
-  border-radius: 8px;
-  border: 0.5px solid rgba(37,99,235,.12);
-  margin-bottom: 16px;
-}
-.findings-summary strong { color: #1e3a8a; }
-.insight-list-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.insight-item { font-size: 14px; line-height: 1.65; color: #1e3a8a; margin-bottom: 8px; padding-left: 16px; position: relative; }
-.insight-item:last-child { margin-bottom: 0; }
-.insight-item::before { content: "→"; position: absolute; left: 0; color: var(--blue); font-size: 12px; top: 2px; }
-.error-box {
-  background: var(--red-light);
-  border: 0.5px solid rgba(220,38,38,.2);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  font-size: 14px;
-  color: var(--red);
-  margin-bottom: 16px;
-  display: none;
-}
-.divider { height: 0.5px; background: var(--border); margin: 24px 0; }
-.section-label { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
-.section-sublabel { font-size: 13px; color: var(--muted); margin-bottom: 14px; margin-top: -8px; line-height: 1.5; }
-.footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 40px; }
-.info-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 10px; font-weight: 700; cursor: default; }
-</style>
-</head>
-<body>
-<div class="container">
-<div class="header">
-  <div class="tag">Research Tool</div>
-  <h1>LLM Tone & Accuracy Tester</h1>
-  <p>Does the tone of a prompt change how an AI responds? This tool sends the same question in four different tones and measures the differences in response length, complexity, and how similar the answers are to each other.</p>
-</div>
-<div class="card">
-  <div class="card-title">Gemini API Key</div>
-  <label>Paste your key below — it stays in your browser and is never stored or sent anywhere except Google's API.</label>
-  <input type="password" id="api-key" placeholder="AIza..." />
-</div>
-<div class="card">
-  <div class="card-title">Your question</div>
-  <label>Try a sample or type your own</label>
-  <div class="samples">
-    <button class="sample-pill" onclick="setSample('What causes inflation?')">What causes inflation?</button>
-    <button class="sample-pill" onclick="setSample('How does the immune system work?')">How does the immune system work?</button>
-    <button class="sample-pill" onclick="setSample('How does public key encryption work?')">How does public key encryption work?</button>
-    <button class="sample-pill" onclick="setSample('What are the pros and cons of remote work?')">Pros and cons of remote work?</button>
-    <button class="sample-pill" onclick="setSample('Explain machine learning in simple terms.')">Explain machine learning</button>
-  </div>
-  <textarea id="question" placeholder="Type any question here..."></textarea>
-  <div class="btn-row">
-    <button class="btn btn-primary" id="run-btn" onclick="runAnalysis()">Run tone analysis</button>
-    <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
-  </div>
-</div>
-<div class="error-box" id="error-box"></div>
-<div class="spinner" id="spinner">
-  <div class="dot-wrap">
-    <div class="dot-flashing"></div>
-  </div>
-  Sending all 4 tone variations to Gemini Pro...
-</div>
-<div class="results" id="results">
-  <div class="divider"></div>
-  <div class="section-label">Response metrics by tone</div>
-  <div class="metrics-grid" id="metrics-grid"></div>
-  <!-- Reading Grade Explainer -->
-  <div class="grade-explainer">
-    <div class="grade-explainer-title">
-      <span class="info-icon">i</span>
-      What does "Reading Grade" mean?
-    </div>
-    <div class="grade-explainer-subtitle">
-      Reading grade estimates how easy the response is to read, based on sentence length and word complexity. It roughly maps to US school grade levels — a grade 6 response is easy for most people; grade 16+ is academic or technical writing.
-    </div>
-    <div class="grade-scale">
-      <div class="grade-band band-easy">
-        <div class="grade-band-label">Easy</div>
-        <div class="grade-band-range">1–6</div>
-        <div class="grade-band-example">Like a newspaper or casual blog post. Anyone can read this.</div>
-      </div>
-      <div class="grade-band band-medium">
-        <div class="grade-band-label">Moderate</div>
-        <div class="grade-band-range">7–10</div>
-        <div class="grade-band-example">Like a news magazine or high school textbook. Comfortable for most adults.</div>
-      </div>
-      <div class="grade-band band-hard">
-        <div class="grade-band-label">Complex</div>
-        <div class="grade-band-range">11–14</div>
-        <div class="grade-band-example">Like a college essay or professional report. Needs some focus to follow.</div>
-      </div>
-      <div class="grade-band band-expert">
-        <div class="grade-band-label">Expert</div>
-        <div class="grade-band-range">15+</div>
-        <div class="grade-band-example">Like an academic paper or legal document. Dense and technical.</div>
-      </div>
-    </div>
-  </div>
-  <div class="divider"></div>
-  <div class="section-label">How similar were the answers?</div>
-  <p class="section-sublabel">This compares the content of each pair of tone responses. A high percentage means both tones produced nearly the same answer. A low percentage means the tone meaningfully changed what the AI said.</p>
-  <!-- Legend -->
-  <div class="sim-legend">
-    <div class="sim-legend-item">
-      <div class="sim-dot" style="background:var(--green)"></div>
-      <span class="sim-legend-range" style="color:var(--green)">75–100%</span>
-      <span class="sim-legend-desc">Nearly identical — tone had little effect</span>
-    </div>
-    <div class="sim-legend-item">
-      <div class="sim-dot" style="background:var(--amber)"></div>
-      <span class="sim-legend-range" style="color:var(--amber)">50–74%</span>
-      <span class="sim-legend-desc">Noticeable differences — tone changed the answer somewhat</span>
-    </div>
-    <div class="sim-legend-item">
-      <div class="sim-dot" style="background:var(--red)"></div>
-      <span class="sim-legend-range" style="color:var(--red)">0–49%</span>
-      <span class="sim-legend-desc">Very different — tone had a big impact</span>
-    </div>
-  </div>
-  <div class="sim-grid" id="sim-grid"></div>
-  <div class="divider"></div>
-  <div class="section-label">Full responses by tone</div>
-  <div id="responses-list"></div>
-  <div class="divider"></div>
-  <div class="section-label">What does this show?</div>
-  <div class="insight-box">
-    <h3>Findings for this question</h3>
-    <div class="findings-visual" id="findings-visual"></div>
-    <div id="findings-summary"></div>
-    <div class="insight-list-title">Takeaways</div>
-    <div id="insights"></div>
-  </div>
-</div>
-<div class="footer">Built by Ishani Srivastava</div>
-</div>
-<script>
-const TONES = ["Polite", "Neutral", "Thorough", "Blunt"];
-const TONE_COLORS = {
-Polite: "tone-polite",
-Neutral: "tone-neutral",
-Thorough: "tone-thorough",
-Blunt: "tone-blunt"
-};
-function setSample(q) {
-document.getElementById("question").value = q;
-}
-function clearAll() {
-document.getElementById("question").value = "";
-document.getElementById("results").classList.remove("active");
-document.getElementById("error-box").style.display = "none";
-}
-function makeTonedPrompt(question, tone) {
-if (tone === "Polite")
-  return `Could you please help me with the following? I would really appreciate your assistance. ${question} Thank you so much!`;
-if (tone === "Neutral")
-  return question;
-if (tone === "Thorough")
-  return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
-if (tone === "Blunt")
-  return `${question} Answer now. Be brief.`;
-}
-function similarity(a, b) {
-const longer = a.length > b.length ? a : b;
-const shorter = a.length > b.length ? b : a;
-if (longer.length === 0) return 100;
-let matches = 0;
-const used = new Array(longer.length).fill(false);
-for (let i = 0; i < shorter.length; i++) {
-  for (let j = 0; j < longer.length; j++) {
-    if (!used[j] && shorter[i] === longer[j]) {
-      matches++;
-      used[j] = true;
-      break;
-    }
-  }
-}
-return Math.round((2 * matches) / (a.length + b.length) * 100);
-}
-function simVerdict(score) {
-if (score >= 75) return "sim-high";
-if (score >= 50) return "sim-mid";
-return "sim-low";
-}
-function wordCount(text) {
-return text.trim().split(/\s+/).length;
-}
-function sentenceCount(text) {
-return (text.match(/[.!?]+/g) || []).length || 1;
-}
-function readingGrade(text) {
-const words = text.trim().split(/\s+/);
-const sentences = sentenceCount(text);
-const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
-const fkgl = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
-return Math.max(1, Math.round(fkgl * 10) / 10);
-}
-/** CSS class for metric reading grade — same bands as the grade explainer (1–6, 7–10, 11–14, 15+). */
-function gradeBandMetricClass(grade) {
-if (grade <= 6) return "metric-grade-easy";
-if (grade <= 10) return "metric-grade-medium";
-if (grade < 15) return "metric-grade-hard";
-return "metric-grade-expert";
-}
-function countSyllables(word) {
-word = word.toLowerCase().replace(/[^a-z]/g, "");
-if (word.length <= 3) return 1;
-word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
-word = word.replace(/^y/, "");
-const m = word.match(/[aeiouy]{1,2}/g);
-return m ? m.length : 1;
-}
-async function callGemini(apiKey, prompt) {
-const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
-const body = {
-  contents: [{ parts: [{ text: prompt }] }],
-  generationConfig: { maxOutputTokens: 2048 }
-};
-const res = await fetch(url, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(body)
-});
-if (!res.ok) {
-  const err = await res.json();
-  throw new Error(err.error?.message || "API error");
-}
-const data = await res.json();
-return data.candidates[0].content.parts[0].text;
-}
-async function runAnalysis() {
-const apiKey = document.getElementById("api-key").value.trim();
-const question = document.getElementById("question").value.trim();
-const errBox = document.getElementById("error-box");
-errBox.style.display = "none";
-if (!apiKey) { showError("Please paste your Gemini API key above."); return; }
-if (!question) { showError("Please enter a question."); return; }
-document.getElementById("run-btn").disabled = true;
-document.getElementById("spinner").classList.add("active");
-document.getElementById("results").classList.remove("active");
-try {
-  const results = {};
-  for (const tone of TONES) {
-    const prompt = makeTonedPrompt(question, tone);
-    const response = await callGemini(apiKey, prompt);
-    results[tone] = {
-      prompt,
-      response,
-      words: wordCount(response),
-      grade: readingGrade(response),
-      sentences: sentenceCount(response)
-    };
-  }
-  renderMetrics(results);
-  renderSimilarity(results);
-  renderResponses(results);
-  renderInsights(results);
-  document.getElementById("results").classList.add("active");
-} catch (e) {
-  showError("Error: " + e.message + " — double-check your API key and try again.");
-}
-document.getElementById("run-btn").disabled = false;
-document.getElementById("spinner").classList.remove("active");
-}
-function showError(msg) {
-const b = document.getElementById("error-box");
-b.textContent = msg;
-b.style.display = "block";
-}
-function renderMetrics(results) {
-const grid = document.getElementById("metrics-grid");
-grid.innerHTML = TONES.map(tone => `
-  <div class="metric-card">
-    <div class="metric-tone ${TONE_COLORS[tone]}">${tone}</div>
-    <div class="metric-item">
-      <div class="metric-label">Word count</div>
-      <div class="metric-value">${results[tone].words}</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-label">Reading grade</div>
-      <div class="metric-value ${gradeBandMetricClass(results[tone].grade)}">${results[tone].grade}</div>
-    </div>
-    <div class="metric-item">
-      <div class="metric-label">Sentences</div>
-      <div class="metric-value">${results[tone].sentences}</div>
-    </div>
-  </div>
-`).join("");
-}
-function renderSimilarity(results) {
-const grid = document.getElementById("sim-grid");
-grid.innerHTML = TONES.map(toneA => `
-  <div class="sim-card">
-    <h4>vs. ${toneA}</h4>
-    ${TONES.map(toneB => {
-      if (toneA === toneB) return `<div class="sim-row"><span class="sim-row-label">${toneB}</span><span style="color:var(--muted);font-size:13px">—</span></div>`;
-      const score = similarity(results[toneA].response, results[toneB].response);
-      const vCls = simVerdict(score);
-      return `
-        <div class="sim-row ${vCls}">
-          <span class="sim-row-label">${toneB}</span>
-          <span class="sim-detail">
-            <span class="sim-pct">${score}%</span>
-          </span>
-        </div>`;
-    }).join("")}
-  </div>
-`).join("");
-}
-function renderResponses(results) {
-const list = document.getElementById("responses-list");
-list.innerHTML = TONES.map(tone => `
-  <div class="response-section">
-    <button class="response-toggle" onclick="toggleResponse(this)">
-      <span><span class="metric-tone ${TONE_COLORS[tone]}" style="margin-right:10px">${tone}</span>${results[tone].words} words &nbsp;·&nbsp; grade ${results[tone].grade}</span>
-      <span class="arrow">▼</span>
-    </button>
-    <div class="response-body">
-      <div class="prompt-label">Prompt sent</div>
-      <div class="prompt-box">${escHtml(results[tone].prompt)}</div>
-      <div class="prompt-label">Gemini's response</div>
-      <div class="response-text">${escHtml(results[tone].response)}</div>
-    </div>
-  </div>
-`).join("");
-}
-function toggleResponse(btn) {
-btn.classList.toggle("open");
-btn.nextElementSibling.classList.toggle("open");
-}
-function escHtml(str) {
-return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-const TONE_BAR_CLASS = { Polite: "polite", Neutral: "neutral", Thorough: "thorough", Blunt: "blunt" };
-function findingsBarRow(label, value, maxVal, valueSuffix) {
-const pct = maxVal > 0 ? Math.round((value / maxVal) * 100) : 0;
-return `
-  <div class="findings-bar-row">
-    <span class="findings-bar-label">${label}</span>
-    <div class="findings-bar-track"><div class="findings-bar-fill ${TONE_BAR_CLASS[label]}" style="width:${pct}%"></div></div>
-    <span class="findings-bar-val">${value}${valueSuffix}</span>
-  </div>`;
-}
-function renderInsights(results) {
-const words = Object.fromEntries(TONES.map(t => [t, results[t].words]));
-const grades = Object.fromEntries(TONES.map(t => [t, results[t].grade]));
-const maxWords = Math.max(...TONES.map(t => words[t]), 1);
-const maxGrade = Math.max(...TONES.map(t => grades[t]), 1);
-const mostWords = TONES.reduce((a,b) => words[a] > words[b] ? a : b);
-const leastWords = TONES.reduce((a,b) => words[a] < words[b] ? a : b);
-const highestGrade = TONES.reduce((a,b) => grades[a] > grades[b] ? a : b);
-const lowestGrade = TONES.reduce((a,b) => grades[a] < grades[b] ? a : b);
-const polNeuSim = similarity(results["Polite"].response, results["Neutral"].response);
-const polBluSim = similarity(results["Polite"].response, results["Blunt"].response);
-const supportsHypothesis = words["Polite"] > words["Blunt"];
-const wordDiff = words[mostWords] - words[leastWords];
-document.getElementById("findings-visual").innerHTML = `
-    <div class="findings-chart-block">
-      <div class="findings-chart-title">Response length (words)</div>
-      ${TONES.map(t => findingsBarRow(t, words[t], maxWords, " words")).join("")}
-    </div>
-    <div class="findings-chart-block">
-      <div class="findings-chart-title">Reading complexity (grade)</div>
-      ${TONES.map(t => findingsBarRow(t, grades[t], maxGrade, "")).join("")}
-    </div>
-`;
-document.getElementById("findings-summary").innerHTML = `
-  <div class="findings-summary">
-    At a glance: <strong>${mostWords}</strong> used the most words (${words[mostWords]}); <strong>${leastWords}</strong> the fewest (${words[leastWords]}). Reading level was highest for <strong>${highestGrade}</strong> (grade ${grades[highestGrade]}) and lowest for <strong>${lowestGrade}</strong> (grade ${grades[lowestGrade]}). Polite vs. neutral similarity was <strong>${polNeuSim}%</strong>; polite vs. blunt was <strong>${polBluSim}%</strong>.
-  </div>
-`;
-const insights = [
-  `Length spread: <strong>${wordDiff}</strong> words between the longest (${mostWords}) and shortest (${leastWords}) tone — compare the bars above.`,
-  `Complexity spread: reading grade ranges from <strong>${grades[lowestGrade]}</strong> (${lowestGrade}) to <strong>${grades[highestGrade]}</strong> (${highestGrade}).`,
-  `When tone is subtle (Polite vs. Neutral), overlap is <strong>${polNeuSim}%</strong> — ${polNeuSim >= 75 ? "substance stayed similar." : polNeuSim >= 50 ? "you see moderate wording or emphasis shifts." : "content diverged noticeably."}`,
-  `When tone is extreme (Polite vs. Blunt), overlap is <strong>${polBluSim}%</strong> — the strongest contrast in this run.`,
-  `Hypothesis check: polite longer than blunt? <strong>${supportsHypothesis ? "Yes — polite had more words this time." : "Not here — blunt matched or exceeded polite length."}</strong>`
-];
-document.getElementById("insights").innerHTML = insights
-  .map(i => `<div class="insight-item">${i}</div>`)
-  .join("");
-}
-</script>
-</body>
-</html>
 
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>LLM Tone Tester — Ishani Srivastava</title>
+
+<style>
+
+ :root {
+
+   --bg: #f9f9f8;
+
+   --surface: #ffffff;
+
+   --border: rgba(0,0,0,0.1);
+
+   --text: #1a1a1a;
+
+   --muted: #6b6b6b;
+
+   --blue: #2563eb;
+
+   --blue-light: #eff6ff;
+
+   --green: #16a34a;
+
+   --green-light: #f0fdf4;
+
+   --amber: #d97706;
+
+   --amber-light: #fffbeb;
+
+   --red: #dc2626;
+
+   --red-light: #fef2f2;
+
+   --radius: 10px;
+
+ }
+
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+
+ body {
+
+   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+   background: var(--bg);
+
+   color: var(--text);
+
+   min-height: 100vh;
+
+   padding: 40px 20px;
+
+ }
+
+ .container { max-width: 900px; margin: 0 auto; }
+
+ .header { margin-bottom: 32px; }
+
+ .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+
+ .header p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+ .tag {
+
+   display: inline-block;
+
+   background: var(--blue-light);
+
+   color: var(--blue);
+
+   font-size: 11px;
+
+   font-weight: 600;
+
+   padding: 3px 10px;
+
+   border-radius: 20px;
+
+   margin-bottom: 12px;
+
+   letter-spacing: .03em;
+
+ }
+
+ .card {
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   padding: 20px 24px;
+
+   margin-bottom: 16px;
+
+ }
+
+ .card-title {
+
+   font-size: 12px;
+
+   font-weight: 600;
+
+   color: var(--muted);
+
+   text-transform: uppercase;
+
+   letter-spacing: .05em;
+
+   margin-bottom: 12px;
+
+ }
+
+ label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
+
+ input[type="password"], textarea {
+
+   width: 100%;
+
+   border: 0.5px solid var(--border);
+
+   border-radius: 8px;
+
+   padding: 10px 14px;
+
+   font-size: 14px;
+
+   font-family: inherit;
+
+   color: var(--text);
+
+   background: var(--bg);
+
+   outline: none;
+
+   transition: border-color .15s;
+
+ }
+
+ input[type="password"]:focus, textarea:focus { border-color: var(--blue); }
+
+ textarea { min-height: 100px; resize: vertical; }
+
+ .btn {
+
+   display: inline-flex;
+
+   align-items: center;
+
+   gap: 8px;
+
+   padding: 10px 22px;
+
+   border-radius: 8px;
+
+   font-size: 14px;
+
+   font-weight: 500;
+
+   cursor: pointer;
+
+   border: none;
+
+   transition: opacity .15s, transform .1s;
+
+ }
+
+ .btn:active { transform: scale(0.98); }
+
+ .btn-primary { background: var(--blue); color: white; }
+
+ .btn-primary:hover { opacity: .88; }
+
+ .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+ .btn-ghost {
+
+   background: transparent;
+
+   border: 0.5px solid var(--border);
+
+   color: var(--muted);
+
+ }
+
+ .btn-ghost:hover { background: var(--bg); }
+
+ .btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+
+ .samples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+ .sample-pill {
+
+   padding: 5px 14px;
+
+   border-radius: 20px;
+
+   border: 0.5px solid var(--border);
+
+   background: transparent;
+
+   font-size: 12px;
+
+   color: var(--muted);
+
+   cursor: pointer;
+
+   font-family: inherit;
+
+   transition: background .12s, color .12s;
+
+ }
+
+ .sample-pill:hover { background: var(--surface); color: var(--text); }
+
+ .spinner {
+
+   display: none;
+
+   align-items: center;
+
+   gap: 10px;
+
+   font-size: 14px;
+
+   color: var(--muted);
+
+   padding: 16px 0;
+
+ }
+
+ .spinner.active { display: flex; }
+
+ .dot-flashing {
+
+   width: 8px; height: 8px;
+
+   border-radius: 50%;
+
+   background: var(--blue);
+
+   animation: dotFlash 1s infinite alternate;
+
+ }
+
+ .dot-flashing::before, .dot-flashing::after {
+
+   content: '';
+
+   display: inline-block;
+
+   width: 8px; height: 8px;
+
+   border-radius: 50%;
+
+   background: var(--blue);
+
+   position: absolute;
+
+   animation: dotFlash 1s infinite alternate;
+
+ }
+
+ .dot-flashing::before { left: -12px; animation-delay: -.2s; }
+
+ .dot-flashing::after { left: 12px; animation-delay: .2s; }
+
+ .dot-wrap { position: relative; width: 32px; height: 8px; }
+
+ @keyframes dotFlash { 0%{opacity:.2} 100%{opacity:1} }
+
+ .results { display: none; }
+
+ .results.active { display: block; }
+
+ .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+
+ @media(max-width:600px){ .metrics-grid{grid-template-columns:repeat(2,1fr);} }
+
+ .metric-card {
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   padding: 14px 16px;
+
+ }
+
+ .metric-tone {
+
+   font-size: 11px;
+
+   font-weight: 700;
+
+   letter-spacing: .05em;
+
+   text-transform: uppercase;
+
+   margin-bottom: 10px;
+
+   padding: 3px 10px;
+
+   border-radius: 20px;
+
+   display: inline-block;
+
+ }
+
+ .tone-polite { background: var(--green-light); color: var(--green); }
+
+ .tone-neutral { background: var(--blue-light); color: var(--blue); }
+
+ .tone-commanding { background: var(--amber-light); color: var(--amber); }
+
+ .tone-blunt { background: var(--red-light); color: var(--red); }
+
+ .metric-item { margin-bottom: 8px; }
+
+ .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+
+ .metric-value { font-size: 20px; font-weight: 600; }
+
+/* Match Reading Grade explainer bands (1–6, 7–10, 11–14, 15+). */
+
+.metric-grade-easy { color: var(--green); }
+
+.metric-grade-medium { color: var(--blue); }
+
+.metric-grade-hard { color: var(--amber); }
+
+.metric-grade-expert { color: var(--red); }
+
+ .grade-explainer {
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   padding: 20px 24px;
+
+   margin-top: 12px;
+
+ }
+
+ .grade-explainer-title {
+
+   font-size: 13px;
+
+   font-weight: 600;
+
+   color: var(--text);
+
+   margin-bottom: 4px;
+
+   display: flex;
+
+   align-items: center;
+
+   gap: 6px;
+
+ }
+
+ .grade-explainer-subtitle {
+
+   font-size: 13px;
+
+   color: var(--muted);
+
+   margin-bottom: 16px;
+
+   line-height: 1.5;
+
+ }
+
+ .grade-scale {
+
+   display: grid;
+
+   grid-template-columns: repeat(4, 1fr);
+
+   gap: 10px;
+
+ }
+
+ @media(max-width:600px){ .grade-scale{grid-template-columns:repeat(2,1fr);} }
+
+ .grade-band { border-radius: 8px; padding: 12px 14px; }
+
+ .grade-band-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 4px; }
+
+ .grade-band-range { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+
+ .grade-band-example { font-size: 11px; line-height: 1.4; opacity: .8; }
+
+ .band-easy { background: var(--green-light); color: var(--green); }
+
+ .band-easy .grade-band-range { color: var(--green); }
+
+ .band-medium { background: var(--blue-light); color: var(--blue); }
+
+ .band-medium .grade-band-range { color: var(--blue); }
+
+ .band-hard { background: var(--amber-light); color: var(--amber); }
+
+ .band-hard .grade-band-range { color: var(--amber); }
+
+ .band-expert { background: var(--red-light); color: var(--red); }
+
+ .band-expert .grade-band-range { color: var(--red); }
+
+ .sim-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+
+ @media(max-width:600px){ .sim-grid{grid-template-columns:repeat(2,1fr);} }
+
+ .sim-card {
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   padding: 14px 16px;
+
+ }
+
+ .sim-card h4 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); }
+
+ .sim-row {
+
+   display: flex;
+
+   justify-content: space-between;
+
+   align-items: center;
+
+   font-size: 13px;
+
+   padding: 6px 0;
+
+   border-bottom: 0.5px solid var(--border);
+
+ }
+
+ .sim-row:last-child { border-bottom: none; }
+
+ .sim-row-label { font-size: 12px; color: var(--text); }
+
+ .sim-pct { font-weight: 700; font-size: 14px; }
+
+ .sim-high .sim-pct { color: var(--green); }
+
+ .sim-mid .sim-pct { color: var(--amber); }
+
+ .sim-low .sim-pct { color: var(--red); }
+
+ .sim-legend {
+
+   margin-bottom: 16px;
+
+   padding: 14px 18px;
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   display: flex;
+
+   flex-direction: column;
+
+   gap: 8px;
+
+ }
+
+ .sim-legend-item {
+
+   display: grid;
+
+   grid-template-columns: 60px 1fr;
+
+   align-items: center;
+
+   gap: 10px;
+
+   font-size: 13px;
+
+ }
+
+ .sim-legend-range { font-weight: 700; font-size: 12px; white-space: nowrap; }
+
+ .sim-legend-desc { color: var(--muted); }
+
+ .sim-legend-sep { height: 0.5px; background: var(--border); }
+
+ .response-section { margin-bottom: 10px; }
+
+ .response-toggle {
+
+   width: 100%;
+
+   text-align: left;
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   padding: 14px 18px;
+
+   font-size: 14px;
+
+   font-weight: 500;
+
+   cursor: pointer;
+
+   display: flex;
+
+   justify-content: space-between;
+
+   align-items: center;
+
+   font-family: inherit;
+
+   color: var(--text);
+
+   transition: background .12s;
+
+ }
+
+ .response-toggle:hover { background: var(--bg); }
+
+ .response-toggle .arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
+
+ .response-toggle.open .arrow { transform: rotate(180deg); }
+
+ .response-body {
+
+   display: none;
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-top: none;
+
+   border-radius: 0 0 var(--radius) var(--radius);
+
+   padding: 16px 18px;
+
+ }
+
+ .response-body.open { display: block; }
+
+ .prompt-box {
+
+   background: var(--bg);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: 6px;
+
+   padding: 10px 14px;
+
+   font-size: 13px;
+
+   color: var(--muted);
+
+   margin-bottom: 12px;
+
+   line-height: 1.6;
+
+ }
+
+ .prompt-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+
+ .response-text { font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+
+ .findings-box {
+
+   background: var(--surface);
+
+   border: 0.5px solid var(--border);
+
+   border-radius: var(--radius);
+
+   overflow: hidden;
+
+ }
+
+ .findings-header {
+
+   padding: 16px 22px 14px;
+
+   border-bottom: 0.5px solid var(--border);
+
+ }
+
+ .findings-header h3 { font-size: 14px; font-weight: 600; color: var(--text); }
+
+ .findings-charts {
+
+   display: grid;
+
+   grid-template-columns: 1fr 1fr;
+
+ }
+
+ @media(max-width:600px){ .findings-charts{grid-template-columns:1fr;} }
+
+ .findings-chart-block {
+
+   padding: 20px 22px;
+
+   border-right: 0.5px solid var(--border);
+
+ }
+
+ .findings-chart-block:last-child { border-right: none; }
+
+ .findings-chart-label {
+
+   font-size: 11px;
+
+   font-weight: 600;
+
+   text-transform: uppercase;
+
+   letter-spacing: .05em;
+
+   color: var(--muted);
+
+   margin-bottom: 14px;
+
+ }
+
+ .bar-row {
+
+   display: flex;
+
+   align-items: center;
+
+   gap: 10px;
+
+   margin-bottom: 10px;
+
+ }
+
+ .bar-tone-label {
+
+   font-size: 12px;
+
+   font-weight: 600;
+
+   width: 82px;
+
+   flex-shrink: 0;
+
+ }
+
+ .bar-track {
+
+   flex: 1;
+
+   height: 20px;
+
+   background: var(--bg);
+
+   border-radius: 4px;
+
+   overflow: hidden;
+
+ }
+
+ .bar-fill {
+
+   height: 100%;
+
+   border-radius: 4px;
+
+   transition: width .6s ease;
+
+   display: flex;
+
+   align-items: center;
+
+   justify-content: flex-end;
+
+   padding-right: 6px;
+
+   min-width: 0;
+
+ }
+
+ .bar-val { font-size: 11px; font-weight: 700; color: white; white-space: nowrap; }
+
+ .bar-val-outside { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+ .bar-polite .bar-tone-label { color: var(--green); }
+
+ .bar-polite .bar-fill { background: var(--green); }
+
+ .bar-neutral .bar-tone-label { color: var(--blue); }
+
+ .bar-neutral .bar-fill { background: var(--blue); }
+
+ .bar-commanding .bar-tone-label { color: var(--amber); }
+
+ .bar-commanding .bar-fill { background: var(--amber); }
+
+ .bar-blunt .bar-tone-label { color: var(--red); }
+
+ .bar-blunt .bar-fill { background: var(--red); }
+
+ .findings-summary {
+
+   border-top: 0.5px solid var(--border);
+
+   padding: 16px 22px;
+
+   display: flex;
+
+   flex-direction: column;
+
+   gap: 8px;
+
+ }
+
+ .finding-line {
+
+   font-size: 13px;
+
+   line-height: 1.6;
+
+   color: var(--muted);
+
+   padding-left: 14px;
+
+   position: relative;
+
+ }
+
+ .finding-line::before { content: "→"; position: absolute; left: 0; color: var(--blue); font-size: 11px; top: 2px; }
+
+ .finding-line strong { color: var(--text); }
+
+ .error-box {
+
+   background: var(--red-light);
+
+   border: 0.5px solid rgba(220,38,38,.2);
+
+   border-radius: var(--radius);
+
+   padding: 14px 18px;
+
+   font-size: 14px;
+
+   color: var(--red);
+
+   margin-bottom: 16px;
+
+   display: none;
+
+ }
+
+ .divider { height: 0.5px; background: var(--border); margin: 24px 0; }
+
+ .section-label { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+
+ .section-sublabel { font-size: 13px; color: var(--muted); margin-bottom: 14px; margin-top: -8px; line-height: 1.5; }
+
+ .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 40px; }
+
+ .info-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 10px; font-weight: 700; cursor: default; }
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+ <div class="header">
+
+   <div class="tag">Research Tool</div>
+
+   <h1>LLM Tone & Accuracy Tester</h1>
+
+   <p>Does the tone of a prompt change how an AI responds? This tool sends the same question in four different tones and measures the differences in response length, complexity, and how similar the answers are to each other.</p>
+
+ </div>
+
+ <div class="card">
+
+   <div class="card-title">Gemini API Key</div>
+
+   <label>Paste your key below — it stays in your browser and is never stored or sent anywhere except Google's API.</label>
+
+   <input type="password" id="api-key" placeholder="AIza..." />
+
+ </div>
+
+ <div class="card">
+
+   <div class="card-title">Your question</div>
+
+   <label>Try a sample or type your own</label>
+
+   <div class="samples">
+
+     <button class="sample-pill" onclick="setSample('What causes inflation?')">What causes inflation?</button>
+
+     <button class="sample-pill" onclick="setSample('How does the immune system work?')">How does the immune system work?</button>
+
+     <button class="sample-pill" onclick="setSample('How does public key encryption work?')">How does public key encryption work?</button>
+
+     <button class="sample-pill" onclick="setSample('What are the pros and cons of remote work?')">Pros and cons of remote work?</button>
+
+     <button class="sample-pill" onclick="setSample('Explain machine learning in simple terms.')">Explain machine learning</button>
+
+   </div>
+
+   <textarea id="question" placeholder="Type any question here..."></textarea>
+
+   <div class="btn-row">
+
+     <button class="btn btn-primary" id="run-btn" onclick="runAnalysis()">Run tone analysis</button>
+
+     <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+
+   </div>
+
+ </div>
+
+ <div class="error-box" id="error-box"></div>
+
+ <div class="spinner" id="spinner">
+
+   <div class="dot-wrap"><div class="dot-flashing"></div></div>
+
+  Sending one request for all 4 tones...
+
+ </div>
+
+ <div class="results" id="results">
+
+   <div class="divider"></div>
+
+   <div class="section-label">Response metrics by tone</div>
+
+   <div class="metrics-grid" id="metrics-grid"></div>
+
+   <div class="grade-explainer">
+
+     <div class="grade-explainer-title">
+
+       <span class="info-icon">i</span>
+
+       What does "Reading Grade" mean?
+
+     </div>
+
+     <div class="grade-explainer-subtitle">
+
+       Reading grade estimates how easy the response is to read, based on sentence length and word complexity. It roughly maps to US school grade levels — a grade 6 response is easy for most people; grade 16+ is academic or technical writing.
+
+     </div>
+
+     <div class="grade-scale">
+
+       <div class="grade-band band-easy">
+
+         <div class="grade-band-label">Easy</div>
+
+         <div class="grade-band-range">1–6</div>
+
+         <div class="grade-band-example">Like a newspaper or casual blog post. Anyone can read this.</div>
+
+       </div>
+
+       <div class="grade-band band-medium">
+
+         <div class="grade-band-label">Moderate</div>
+
+         <div class="grade-band-range">7–10</div>
+
+         <div class="grade-band-example">Like a news magazine or high school textbook. Comfortable for most adults.</div>
+
+       </div>
+
+       <div class="grade-band band-hard">
+
+         <div class="grade-band-label">Complex</div>
+
+         <div class="grade-band-range">11–14</div>
+
+         <div class="grade-band-example">Like a college essay or professional report. Needs some focus to follow.</div>
+
+       </div>
+
+       <div class="grade-band band-expert">
+
+         <div class="grade-band-label">Expert</div>
+
+         <div class="grade-band-range">15+</div>
+
+         <div class="grade-band-example">Like an academic paper or legal document. Dense and technical.</div>
+
+       </div>
+
+     </div>
+
+   </div>
+
+   <div class="divider"></div>
+
+   <div class="section-label">How similar were the answers?</div>
+
+   <p class="section-sublabel">This compares the content of each pair of tone responses. A high percentage means both tones produced nearly the same answer. A low percentage means tone meaningfully changed what the AI said.</p>
+
+   <div class="sim-legend">
+
+     <div class="sim-legend-item">
+
+       <span class="sim-legend-range" style="color:var(--green)">75–100%</span>
+
+       <span class="sim-legend-desc">Nearly identical — tone had little effect on the answer</span>
+
+     </div>
+
+     <div class="sim-legend-sep"></div>
+
+     <div class="sim-legend-item">
+
+       <span class="sim-legend-range" style="color:var(--amber)">50–74%</span>
+
+       <span class="sim-legend-desc">Noticeable differences — tone changed the answer somewhat</span>
+
+     </div>
+
+     <div class="sim-legend-sep"></div>
+
+     <div class="sim-legend-item">
+
+       <span class="sim-legend-range" style="color:var(--red)">0–49%</span>
+
+       <span class="sim-legend-desc">Very different — tone had a big impact on the answer</span>
+
+     </div>
+
+   </div>
+
+   <div class="sim-grid" id="sim-grid"></div>
+
+   <div class="divider"></div>
+
+   <div class="section-label">Full responses by tone</div>
+
+   <div id="responses-list"></div>
+
+   <div class="divider"></div>
+
+   <div class="section-label">What does this show?</div>
+
+   <div class="findings-box">
+
+     <div class="findings-header"><h3>Findings for this question</h3></div>
+
+     <div class="findings-charts" id="findings-charts"></div>
+
+     <div class="findings-summary" id="findings-summary"></div>
+
+   </div>
+
+ </div>
+
+ <div class="footer">Built by Ishani Srivastava</div>
+
+</div>
+
+<script>
+
+const TONES = ["Polite", "Neutral", "Commanding", "Blunt"];
+
+const TONE_COLORS = { Polite:"tone-polite", Neutral:"tone-neutral", Commanding:"tone-commanding", Blunt:"tone-blunt" };
+
+const TONE_CSS = { Polite:"polite", Neutral:"neutral", Commanding:"commanding", Blunt:"blunt" };
+
+let RATE_LIMIT_COOLDOWN_UNTIL_MS = 0;
+
+function setSample(q) { document.getElementById("question").value = q; }
+
+function clearAll() {
+
+ document.getElementById("question").value = "";
+
+ document.getElementById("results").classList.remove("active");
+
+ document.getElementById("error-box").style.display = "none";
+
+}
+
+function makeTonedPrompt(question, tone) {
+
+ if (tone === "Polite") return `Could you please help me with the following? I would really appreciate your assistance. ${question} Thank you so much!`;
+
+ if (tone === "Neutral") return question;
+
+ if (tone === "Commanding") return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
+
+ if (tone === "Blunt") return `${question} Answer now. Be brief.`;
+
+}
+
+function buildMultiTonePrompt(question) {
+
+  const blocks = TONES.map(tone => `--- Tone: ${tone} ---\n${makeTonedPrompt(question, tone)}`).join("\n\n");
+
+  const keys = TONES.map(t => `"${t}"`).join(", ");
+
+  return `You will answer ${TONES.length} separate user prompts.
+
+
+
+Each block below is the complete user message for one tone. Answer each block independently.
+
+
+
+${blocks}
+
+
+
+Respond with ONLY valid JSON (no markdown code fences, no extra text).
+
+The JSON object must contain exactly these keys: ${keys}.
+
+Each value must be the full answer text for that tone.
+
+Write each answer as 3-8 sentences (avoid unnecessary padding).`;
+
+}
+
+function similarity(a, b) {
+
+ const longer = a.length > b.length ? a : b;
+
+ const shorter = a.length > b.length ? b : a;
+
+ if (longer.length === 0) return 100;
+
+ let matches = 0;
+
+ const used = new Array(longer.length).fill(false);
+
+ for (let i = 0; i < shorter.length; i++) {
+
+   for (let j = 0; j < longer.length; j++) {
+
+     if (!used[j] && shorter[i] === longer[j]) { matches++; used[j] = true; break; }
+
+   }
+
+ }
+
+ return Math.round((2 * matches) / (a.length + b.length) * 100);
+
+}
+
+function simClass(score) {
+
+ if (score >= 75) return "sim-high";
+
+ if (score >= 50) return "sim-mid";
+
+ return "sim-low";
+
+}
+
+function wordCount(text) { return text.trim().split(/\s+/).length; }
+
+function sentenceCount(text) { return (text.match(/[.!?]+/g) || []).length || 1; }
+
+function readingGrade(text) {
+
+ const words = text.trim().split(/\s+/);
+
+ const sentences = sentenceCount(text);
+
+ const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+
+ const fkgl = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
+
+ return Math.max(1, Math.round(fkgl * 10) / 10);
+
+}
+
+/* CSS class for metric reading grade — same bands as explainer (1–6, 7–10, 11–14, 15+). */
+
+function gradeBandMetricClass(grade) {
+
+  if (grade <= 6) return "metric-grade-easy";
+
+  if (grade <= 10) return "metric-grade-medium";
+
+  if (grade < 15) return "metric-grade-hard";
+
+  return "metric-grade-expert";
+
+}
+
+function countSyllables(word) {
+
+ word = word.toLowerCase().replace(/[^a-z]/g, "");
+
+ if (word.length <= 3) return 1;
+
+ word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
+
+ word = word.replace(/^y/, "");
+
+ const m = word.match(/[aeiouy]{1,2}/g);
+
+ return m ? m.length : 1;
+
+}
+
+async function callGemini(apiKey, prompt) {
+
+ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+ const body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2048 } };
+
+ let res;
+
+ try {
+
+   res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+ } catch (e) {
+
+   throw new Error("Network error — check your internet connection and try again.");
+
+ }
+
+ const data = await res.json().catch(() => ({}));
+
+ if (!res.ok) {
+
+   const msg = data.error?.message || `HTTP ${res.status}`;
+
+   const status = res.status;
+
+   if (status === 429) throw new Error("Rate limit hit — wait 30–60 seconds and try again. Free tier allows only a few requests per minute.");
+
+   if (status === 401 || status === 403 || /API_KEY_INVALID|invalid api key|permission denied/i.test(msg)) throw new Error("Invalid API key — double-check you copied it correctly from https://aistudio.google.com/apikey");
+
+   throw new Error(msg);
+
+ }
+
+ const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+ if (!text) throw new Error("Empty response from Gemini — try again.");
+
+ return text;
+
+}
+
+
+
+const GEMINI_MODEL = "gemini-2.5-flash-lite";
+
+const FETCH_TIMEOUT_MS = 120000;
+
+const MAX_429_RETRIES = 2;
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function geminiGenerateUrl(apiKey) {
+
+  return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+}
+
+function parseRetryInSeconds(message) {
+
+  const m = (message || "").match(/retry in ([\d.]+)s/i);
+
+  return m ? parseFloat(m[1]) : null;
+
+}
+
+function isKeyOrAuthError(status, message) {
+
+  const msg = message || "";
+
+  if (status === 401 || status === 403) return true;
+
+  return /API key expired|invalid API key|API_KEY_INVALID|PERMISSION_DENIED|invalid api key|permission denied/i.test(msg);
+
+}
+
+function parseJsonFromModelText(text) {
+
+  let t = String(text || "").trim();
+
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+
+  if (fence) t = fence[1].trim();
+
+  const start = t.indexOf("{");
+
+  const end = t.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) throw new Error("Could not find JSON in Gemini response.");
+
+  t = t.slice(start, end + 1);
+
+  return JSON.parse(t);
+
+}
+
+function parseToneJson(text, expectedTones) {
+
+  const obj = parseJsonFromModelText(text);
+
+  const out = {};
+
+  for (const tone of expectedTones) {
+
+    const v = obj[tone];
+
+    if (typeof v !== "string" || !v.trim()) throw new Error(`Missing or empty "${tone}" in Gemini JSON response.`);
+
+    out[tone] = v.trim();
+
+  }
+
+  return out;
+
+}
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+
+  const controller = new AbortController();
+
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+
+    return await fetch(url, { ...options, signal: controller.signal });
+
+  } finally {
+
+    clearTimeout(id);
+
+  }
+
+}
+
+async function callGeminiAllTones(apiKey, question) {
+
+  const prompt = buildMultiTonePrompt(question);
+
+  const body = {
+
+    contents: [{ parts: [{ text: prompt }] }],
+
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.2 }
+
+  };
+
+  let lastMessage = "API error";
+
+  for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
+
+    let res;
+
+    try {
+
+      res = await fetchWithTimeout(
+
+        geminiGenerateUrl(apiKey),
+
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+
+        FETCH_TIMEOUT_MS
+
+      );
+
+    } catch (e) {
+
+      if (e && e.name === "AbortError") {
+
+        throw new Error(`Request timed out after ${Math.round(FETCH_TIMEOUT_MS / 1000)}s. Try a shorter question.`);
+
+      }
+
+      throw e;
+
+    }
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text || !String(text).trim()) throw new Error("Empty response from Gemini — try again.");
+
+      return parseToneJson(text, TONES);
+
+    }
+
+    lastMessage = data.error?.message || `HTTP ${res.status}`;
+
+    if (isKeyOrAuthError(res.status, lastMessage)) throw new Error(lastMessage);
+
+    if (res.status === 429) {
+
+      const retrySec = parseRetryInSeconds(lastMessage);
+
+      if (attempt < MAX_429_RETRIES) {
+
+        await sleep((retrySec ? retrySec * 1000 : 30000) + 500);
+
+        continue;
+
+      }
+
+      const waitStr = retrySec ? retrySec.toFixed(1) : "30-60";
+
+      const cooldownMs = retrySec ? (retrySec * 1000 + 1500) : 60000;
+
+      RATE_LIMIT_COOLDOWN_UNTIL_MS = Date.now() + cooldownMs;
+
+      throw new Error(`Rate limit hit — wait ${waitStr} seconds and try again. Free tier allows only a few requests per minute.`);
+
+    }
+
+    throw new Error(lastMessage);
+
+  }
+
+  throw new Error(lastMessage);
+
+}
+
+async function runAnalysis() {
+
+ const apiKey = document.getElementById("api-key").value.trim();
+
+ const question = document.getElementById("question").value.trim();
+
+ const errBox = document.getElementById("error-box");
+
+ errBox.style.display = "none";
+
+ if (!apiKey) { showError("Please paste your Gemini API key above."); return; }
+
+ if (!question) { showError("Please enter a question."); return; }
+
+  const now = Date.now();
+
+  if (now < RATE_LIMIT_COOLDOWN_UNTIL_MS) {
+
+    const sec = Math.max(1, Math.ceil((RATE_LIMIT_COOLDOWN_UNTIL_MS - now) / 1000));
+
+    showError(`Error: Rate limit hit — wait ${sec} seconds and try again.`);
+
+    return;
+
+  }
+
+ document.getElementById("run-btn").disabled = true;
+
+ document.getElementById("spinner").classList.add("active");
+
+ document.getElementById("results").classList.remove("active");
+
+ try {
+
+    const answers = await callGeminiAllTones(apiKey, question);
+
+    const results = {};
+
+    for (const tone of TONES) {
+
+      const prompt = makeTonedPrompt(question, tone);
+
+      const response = answers[tone];
+
+      results[tone] = {
+
+        prompt,
+
+        response,
+
+        words: wordCount(response),
+
+        grade: readingGrade(response),
+
+        sentences: sentenceCount(response)
+
+      };
+
+    }
+
+   renderMetrics(results);
+
+   renderSimilarity(results);
+
+   renderResponses(results);
+
+   renderFindings(results);
+
+   document.getElementById("results").classList.add("active");
+
+ } catch (e) {
+
+    showError("Error: " + (e && e.message ? e.message : String(e)));
+
+ }
+
+ document.getElementById("run-btn").disabled = false;
+
+ document.getElementById("spinner").classList.remove("active");
+
+}
+
+function showError(msg) {
+
+ const b = document.getElementById("error-box");
+
+ b.textContent = msg;
+
+ b.style.display = "block";
+
+}
+
+function renderMetrics(results) {
+
+ const grid = document.getElementById("metrics-grid");
+
+ grid.innerHTML = TONES.map(tone => `
+
+   <div class="metric-card">
+
+     <div class="metric-tone ${TONE_COLORS[tone]}">${tone}</div>
+
+     <div class="metric-item"><div class="metric-label">Word count</div><div class="metric-value">${results[tone].words}</div></div>
+
+    <div class="metric-item"><div class="metric-label">Reading grade</div><div class="metric-value ${gradeBandMetricClass(results[tone].grade)}">${results[tone].grade}</div></div>
+
+     <div class="metric-item"><div class="metric-label">Sentences</div><div class="metric-value">${results[tone].sentences}</div></div>
+
+   </div>`).join("");
+
+}
+
+function renderSimilarity(results) {
+
+ const grid = document.getElementById("sim-grid");
+
+ grid.innerHTML = TONES.map(toneA => `
+
+   <div class="sim-card">
+
+     <h4>vs. ${toneA}</h4>
+
+     ${TONES.map(toneB => {
+
+       if (toneA === toneB) return `<div class="sim-row"><span class="sim-row-label">${toneB}</span><span style="color:var(--muted);font-size:13px">—</span></div>`;
+
+       const score = similarity(results[toneA].response, results[toneB].response);
+
+       return `<div class="sim-row ${simClass(score)}"><span class="sim-row-label">${toneB}</span><span class="sim-pct">${score}%</span></div>`;
+
+     }).join("")}
+
+   </div>`).join("");
+
+}
+
+function renderResponses(results) {
+
+ const list = document.getElementById("responses-list");
+
+ list.innerHTML = TONES.map(tone => `
+
+   <div class="response-section">
+
+     <button class="response-toggle" onclick="toggleResponse(this)">
+
+       <span><span class="metric-tone ${TONE_COLORS[tone]}" style="margin-right:10px">${tone}</span>${results[tone].words} words &nbsp;·&nbsp; grade ${results[tone].grade}</span>
+
+       <span class="arrow">▼</span>
+
+     </button>
+
+     <div class="response-body">
+
+       <div class="prompt-label">Prompt sent</div>
+
+       <div class="prompt-box">${escHtml(results[tone].prompt)}</div>
+
+       <div class="prompt-label">Gemini's response</div>
+
+       <div class="response-text">${escHtml(results[tone].response)}</div>
+
+     </div>
+
+   </div>`).join("");
+
+}
+
+function toggleResponse(btn) {
+
+ btn.classList.toggle("open");
+
+ btn.nextElementSibling.classList.toggle("open");
+
+}
+
+function escHtml(str) {
+
+ return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+}
+
+function renderFindings(results) {
+
+ const words = Object.fromEntries(TONES.map(t => [t, results[t].words]));
+
+ const grades = Object.fromEntries(TONES.map(t => [t, results[t].grade]));
+
+ const maxWords = Math.max(...Object.values(words));
+
+ const maxGrade = Math.max(Math.max(...Object.values(grades)), 16);
+
+ const mostWordsTone = TONES.reduce((a,b) => words[a] > words[b] ? a : b);
+
+ const leastWordsTone = TONES.reduce((a,b) => words[a] < words[b] ? a : b);
+
+ const highestGradeTone = TONES.reduce((a,b) => grades[a] > grades[b] ? a : b);
+
+ const lowestGradeTone = TONES.reduce((a,b) => grades[a] < grades[b] ? a : b);
+
+ const polNeuSim = similarity(results["Polite"].response, results["Neutral"].response);
+
+ const polBluSim = similarity(results["Polite"].response, results["Blunt"].response);
+
+ const wordSpread = words[mostWordsTone] - words[leastWordsTone];
+
+ const gradeSpread = Math.round((grades[highestGradeTone] - grades[lowestGradeTone]) * 10) / 10;
+
+ const simDesc = s => s >= 75 ? "nearly identical" : s >= 50 ? "somewhat different" : "very different";
+
+ 
+
+ document.getElementById("findings-charts").innerHTML = `
+
+   <div class="findings-chart-block">
+
+     <div class="findings-chart-label">Word count by tone</div>
+
+     ${TONES.map(tone => {
+
+       const pct = Math.round((words[tone] / maxWords) * 100);
+
+       const showInside = pct > 35;
+
+       return `<div class="bar-row bar-${TONE_CSS[tone]}">
+
+         <span class="bar-tone-label">${tone}</span>
+
+         <div class="bar-track"><div class="bar-fill" style="width:${pct}%">${showInside ? `<span class="bar-val">${words[tone]}</span>` : ''}</div></div>
+
+         ${!showInside ? `<span class="bar-val-outside">${words[tone]}</span>` : ''}
+
+       </div>`;
+
+     }).join("")}
+
+   </div>
+
+   <div class="findings-chart-block">
+
+     <div class="findings-chart-label">Reading grade by tone</div>
+
+     ${TONES.map(tone => {
+
+       const pct = Math.round((grades[tone] / maxGrade) * 100);
+
+       const showInside = pct > 35;
+
+       return `<div class="bar-row bar-${TONE_CSS[tone]}">
+
+         <span class="bar-tone-label">${tone}</span>
+
+         <div class="bar-track"><div class="bar-fill" style="width:${pct}%">${showInside ? `<span class="bar-val">${grades[tone]}</span>` : ''}</div></div>
+
+         ${!showInside ? `<span class="bar-val-outside">${grades[tone]}</span>` : ''}
+
+       </div>`;
+
+     }).join("")}
+
+   </div>`;
+
+ 
+
+ document.getElementById("findings-summary").innerHTML = [
+
+   `The <strong>${mostWordsTone}</strong> tone produced the longest response (${words[mostWordsTone]} words) and <strong>${leastWordsTone}</strong> the shortest (${words[leastWordsTone]} words) — a gap of <strong>${wordSpread} words</strong>.`,
+
+   `Reading complexity ranged from grade <strong>${grades[lowestGradeTone]}</strong> (${lowestGradeTone}) to grade <strong>${grades[highestGradeTone]}</strong> (${highestGradeTone})${gradeSpread > 0 ? ` — a spread of ${gradeSpread} grade levels` : ''}.`,
+
+   `Polite vs. Neutral answers were <strong>${simDesc(polNeuSim)}</strong> (${polNeuSim}%) — ${polNeuSim > 80 ? "the two tones produced nearly the same content" : "tone had a real effect on what was said, not just how much"}.`,
+
+   `Polite vs. Blunt answers were <strong>${simDesc(polBluSim)}</strong> (${polBluSim}%) — this pair represents the biggest contrast in tone tested.`
+
+ ].map(t => `<div class="finding-line">${t}</div>`).join("");
+
+}
+
+</script>
+
+</body>
+
+</html>
