@@ -176,6 +176,11 @@
  .metric-item { margin-bottom: 8px; }
  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
  .metric-value { font-size: 20px; font-weight: 600; }
+ /* Match reading-grade explainer bands (1–6, 7–10, 11–14, 15+) */
+ .metric-grade-easy { color: var(--green); }
+ .metric-grade-medium { color: var(--blue); }
+ .metric-grade-hard { color: var(--amber); }
+ .metric-grade-expert { color: var(--red); }
  
  /* Reading grade explainer */
  .grade-explainer {
@@ -592,6 +597,13 @@ function readingGrade(text) {
  const fkgl = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
  return Math.max(1, Math.round(fkgl * 10) / 10);
 }
+/** CSS class for metric reading grade — same bands as the grade explainer (1–6, 7–10, 11–14, 15+). */
+function gradeBandMetricClass(grade) {
+ if (grade <= 6) return "metric-grade-easy";
+ if (grade <= 10) return "metric-grade-medium";
+ if (grade < 15) return "metric-grade-hard";
+ return "metric-grade-expert";
+}
 function countSyllables(word) {
  word = word.toLowerCase().replace(/[^a-z]/g, "");
  if (word.length <= 3) return 1;
@@ -668,7 +680,7 @@ function renderMetrics(results) {
      </div>
      <div class="metric-item">
        <div class="metric-label">Reading grade</div>
-       <div class="metric-value">${results[tone].grade}</div>
+       <div class="metric-value ${gradeBandMetricClass(results[tone].grade)}">${results[tone].grade}</div>
      </div>
      <div class="metric-item">
        <div class="metric-label">Sentences</div>
