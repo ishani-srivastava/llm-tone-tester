@@ -21,6 +21,15 @@
    --red-light: #fef2f2;
    --purple: #7c3aed;
    --purple-light: #f5f3ff;
+   /* Tone chips (distinct from reading-grade bands: green/blue/amber/red) */
+   --tone-polite: #4f46e5;
+   --tone-polite-light: #eef2ff;
+   --tone-neutral: #475569;
+   --tone-neutral-light: #f1f5f9;
+   --tone-thorough: #0f766e;
+   --tone-thorough-light: #ccfbf1;
+   --tone-blunt: #a21caf;
+   --tone-blunt-light: #fae8ff;
    --radius: 10px;
  }
  * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -160,10 +169,10 @@
    border-radius: 20px;
    display: inline-block;
  }
- .tone-polite { background: var(--green-light); color: var(--green); }
- .tone-neutral { background: var(--blue-light); color: var(--blue); }
- .tone-commanding { background: var(--amber-light); color: var(--amber); }
- .tone-blunt { background: var(--red-light); color: var(--red); }
+ .tone-polite { background: var(--tone-polite-light); color: var(--tone-polite); }
+ .tone-neutral { background: var(--tone-neutral-light); color: var(--tone-neutral); }
+ .tone-thorough { background: var(--tone-thorough-light); color: var(--tone-thorough); }
+ .tone-blunt { background: var(--tone-blunt-light); color: var(--tone-blunt); }
  .metric-item { margin-bottom: 8px; }
  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
  .metric-value { font-size: 20px; font-weight: 600; }
@@ -366,10 +375,10 @@
    overflow: hidden;
  }
  .findings-bar-fill { height: 100%; border-radius: 5px; transition: width .35s ease; min-width: 2px; }
- .findings-bar-fill.polite { background: var(--green); }
- .findings-bar-fill.neutral { background: var(--blue); }
- .findings-bar-fill.commanding { background: var(--amber); }
- .findings-bar-fill.blunt { background: var(--red); }
+ .findings-bar-fill.polite { background: var(--tone-polite); }
+ .findings-bar-fill.neutral { background: var(--tone-neutral); }
+ .findings-bar-fill.thorough { background: var(--tone-thorough); }
+ .findings-bar-fill.blunt { background: var(--tone-blunt); }
  .findings-bar-val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; white-space: nowrap; }
  .findings-summary {
    font-size: 13px;
@@ -523,11 +532,11 @@
  <div class="footer">Built by Ishani Srivastava</div>
 </div>
 <script>
-const TONES = ["Polite", "Neutral", "Commanding", "Blunt"];
+const TONES = ["Polite", "Neutral", "Thorough", "Blunt"];
 const TONE_COLORS = {
  Polite: "tone-polite",
  Neutral: "tone-neutral",
- Commanding: "tone-commanding",
+ Thorough: "tone-thorough",
  Blunt: "tone-blunt"
 };
 function setSample(q) {
@@ -543,7 +552,7 @@ function makeTonedPrompt(question, tone) {
    return `Could you please help me with the following? I would really appreciate your assistance. ${question} Thank you so much!`;
  if (tone === "Neutral")
    return question;
- if (tone === "Commanding")
+ if (tone === "Thorough")
    return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
  if (tone === "Blunt")
    return `${question} Answer now. Be brief.`;
@@ -712,7 +721,7 @@ function toggleResponse(btn) {
 function escHtml(str) {
  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
-const TONE_BAR_CLASS = { Polite: "polite", Neutral: "neutral", Commanding: "commanding", Blunt: "blunt" };
+const TONE_BAR_CLASS = { Polite: "polite", Neutral: "neutral", Thorough: "thorough", Blunt: "blunt" };
 function findingsBarRow(label, value, maxVal, valueSuffix) {
  const pct = maxVal > 0 ? Math.round((value / maxVal) * 100) : 0;
  return `
