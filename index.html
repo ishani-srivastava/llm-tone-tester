@@ -19,6 +19,8 @@
    --amber-light: #fffbeb;
    --red: #dc2626;
    --red-light: #fef2f2;
+   --purple: #7c3aed;
+   --purple-light: #f5f3ff;
    --radius: 10px;
  }
  * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -161,10 +163,72 @@
  .tone-polite { background: var(--green-light); color: var(--green); }
  .tone-neutral { background: var(--blue-light); color: var(--blue); }
  .tone-commanding { background: var(--amber-light); color: var(--amber); }
- .tone-brusque { background: var(--red-light); color: var(--red); }
+ .tone-blunt { background: var(--red-light); color: var(--red); }
  .metric-item { margin-bottom: 8px; }
  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
  .metric-value { font-size: 20px; font-weight: 600; }
+ 
+ /* Reading grade explainer */
+ .grade-explainer {
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   padding: 20px 24px;
+   margin-top: 12px;
+ }
+ .grade-explainer-title {
+   font-size: 13px;
+   font-weight: 600;
+   color: var(--text);
+   margin-bottom: 4px;
+   display: flex;
+   align-items: center;
+   gap: 6px;
+ }
+ .grade-explainer-subtitle {
+   font-size: 13px;
+   color: var(--muted);
+   margin-bottom: 16px;
+   line-height: 1.5;
+ }
+ .grade-scale {
+   display: grid;
+   grid-template-columns: repeat(4, 1fr);
+   gap: 10px;
+ }
+ @media(max-width:600px){ .grade-scale{grid-template-columns:repeat(2,1fr);} }
+ .grade-band {
+   border-radius: 8px;
+   padding: 12px 14px;
+   position: relative;
+ }
+ .grade-band-label {
+   font-size: 11px;
+   font-weight: 700;
+   letter-spacing: .04em;
+   text-transform: uppercase;
+   margin-bottom: 4px;
+ }
+ .grade-band-range {
+   font-size: 18px;
+   font-weight: 700;
+   margin-bottom: 4px;
+ }
+ .grade-band-example {
+   font-size: 11px;
+   line-height: 1.4;
+   opacity: .8;
+ }
+ .band-easy { background: var(--green-light); color: var(--green); }
+ .band-easy .grade-band-range { color: var(--green); }
+ .band-medium { background: var(--blue-light); color: var(--blue); }
+ .band-medium .grade-band-range { color: var(--blue); }
+ .band-hard { background: var(--amber-light); color: var(--amber); }
+ .band-hard .grade-band-range { color: var(--amber); }
+ .band-expert { background: var(--red-light); color: var(--red); }
+ .band-expert .grade-band-range { color: var(--red); }
+ 
+ /* Similarity cards */
  .sim-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
  @media(max-width:600px){ .sim-grid{grid-template-columns:repeat(2,1fr);} }
  .sim-card {
@@ -174,12 +238,42 @@
    padding: 14px 16px;
  }
  .sim-card h4 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); }
- .sim-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 0.5px solid var(--border); }
+ .sim-row {
+   display: flex;
+   justify-content: space-between;
+   align-items: flex-start;
+   font-size: 13px;
+   padding: 6px 0;
+   border-bottom: 0.5px solid var(--border);
+   gap: 6px;
+ }
  .sim-row:last-child { border-bottom: none; }
- .sim-score { font-weight: 600; }
- .sim-high { color: var(--green); }
- .sim-mid { color: var(--amber); }
- .sim-low { color: var(--red); }
+ .sim-row-label { font-size: 12px; color: var(--text); flex-shrink: 0; }
+ .sim-detail { text-align: right; }
+ .sim-pct { font-weight: 700; font-size: 14px; display: block; }
+ .sim-verdict { font-size: 10px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; display: block; margin-top: 1px; }
+ .sim-high .sim-pct { color: var(--green); }
+ .sim-high .sim-verdict { color: var(--green); }
+ .sim-mid .sim-pct { color: var(--amber); }
+ .sim-mid .sim-verdict { color: var(--amber); }
+ .sim-low .sim-pct { color: var(--red); }
+ .sim-low .sim-verdict { color: var(--red); }
+ 
+ /* Similarity legend */
+ .sim-legend {
+   display: flex;
+   gap: 16px;
+   flex-wrap: wrap;
+   margin-bottom: 16px;
+   padding: 12px 16px;
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   font-size: 12px;
+ }
+ .sim-legend-item { display: flex; align-items: center; gap: 6px; }
+ .sim-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+ 
  .response-section { margin-bottom: 10px; }
  .response-toggle {
    width: 100%;
@@ -243,7 +337,9 @@
  }
  .divider { height: 0.5px; background: var(--border); margin: 24px 0; }
  .section-label { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+ .section-sublabel { font-size: 13px; color: var(--muted); margin-bottom: 14px; margin-top: -8px; line-height: 1.5; }
  .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 40px; }
+ .info-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: var(--blue-light); color: var(--blue); font-size: 10px; font-weight: 700; cursor: default; }
 </style>
 </head>
 <body>
@@ -251,7 +347,7 @@
  <div class="header">
    <div class="tag">Research Tool</div>
    <h1>LLM Tone & Accuracy Tester</h1>
-   <p>Does the tone of a prompt change how an AI responds? This tool empirically tests the hypothesis proposed in <em>Do LLMs Care How You Ask? Prompt Tones and AI Accuracy, Trust, and Engagement</em> (Kotikela et al., ICIS 2025) — sending the same question in four different tones and measuring the differences in response length, complexity, and similarity.</p>
+   <p>Does the tone of a prompt change how an AI responds? This tool sends the same question in four different tones and measures the differences in response length, complexity, and how similar the answers are to each other.</p>
  </div>
  <div class="card">
    <div class="card-title">Gemini API Key</div>
@@ -285,9 +381,63 @@
    <div class="divider"></div>
    <div class="section-label">Response metrics by tone</div>
    <div class="metrics-grid" id="metrics-grid"></div>
+ 
+   <!-- Reading Grade Explainer -->
+   <div class="grade-explainer">
+     <div class="grade-explainer-title">
+       <span class="info-icon">i</span>
+       What does "Reading Grade" mean?
+     </div>
+     <div class="grade-explainer-subtitle">
+       Reading grade estimates how easy the response is to read, based on sentence length and word complexity. It roughly maps to US school grade levels — a grade 6 response is easy for most people; grade 16+ is academic or technical writing.
+     </div>
+     <div class="grade-scale">
+       <div class="grade-band band-easy">
+         <div class="grade-band-label">Easy</div>
+         <div class="grade-band-range">1–6</div>
+         <div class="grade-band-example">Like a newspaper or casual blog post. Anyone can read this.</div>
+       </div>
+       <div class="grade-band band-medium">
+         <div class="grade-band-label">Moderate</div>
+         <div class="grade-band-range">7–10</div>
+         <div class="grade-band-example">Like a news magazine or high school textbook. Comfortable for most adults.</div>
+       </div>
+       <div class="grade-band band-hard">
+         <div class="grade-band-label">Complex</div>
+         <div class="grade-band-range">11–14</div>
+         <div class="grade-band-example">Like a college essay or professional report. Needs some focus to follow.</div>
+       </div>
+       <div class="grade-band band-expert">
+         <div class="grade-band-label">Expert</div>
+         <div class="grade-band-range">15+</div>
+         <div class="grade-band-example">Like an academic paper or legal document. Dense and technical.</div>
+       </div>
+     </div>
+   </div>
+ 
    <div class="divider"></div>
-   <div class="section-label">Similarity between tone responses (%)</div>
-   <p style="font-size:13px;color:var(--muted);margin-bottom:14px">100% = identical answers. Lower % = tone changed the response more significantly.</p>
+   <div class="section-label">How similar were the answers?</div>
+   <p class="section-sublabel">This compares the content of each pair of tone responses. A high percentage means both tones produced nearly the same answer. A low percentage means the tone meaningfully changed what the AI said.</p>
+ 
+   <!-- Legend -->
+   <div class="sim-legend">
+     <div class="sim-legend-item">
+       <div class="sim-dot" style="background:var(--green)"></div>
+       <span style="color:var(--green);font-weight:600">75–100%</span>
+       <span style="color:var(--muted)">Nearly identical — tone had little effect</span>
+     </div>
+     <div class="sim-legend-item">
+       <div class="sim-dot" style="background:var(--amber)"></div>
+       <span style="color:var(--amber);font-weight:600">50–74%</span>
+       <span style="color:var(--muted)">Noticeable differences — tone changed the answer somewhat</span>
+     </div>
+     <div class="sim-legend-item">
+       <div class="sim-dot" style="background:var(--red)"></div>
+       <span style="color:var(--red);font-weight:600">0–49%</span>
+       <span style="color:var(--muted)">Very different — tone had a big impact</span>
+     </div>
+   </div>
+ 
    <div class="sim-grid" id="sim-grid"></div>
    <div class="divider"></div>
    <div class="section-label">Full responses by tone</div>
@@ -299,15 +449,15 @@
      <div id="insights"></div>
    </div>
  </div>
- <div class="footer">Built by Ishani Srivastava &nbsp;·&nbsp; Empirical extension of Kotikela et al. (ICIS 2025)</div>
+ <div class="footer">Built by Ishani Srivastava</div>
 </div>
 <script>
-const TONES = ["Polite", "Neutral", "Commanding", "Brusque"];
+const TONES = ["Polite", "Neutral", "Commanding", "Blunt"];
 const TONE_COLORS = {
  Polite: "tone-polite",
  Neutral: "tone-neutral",
  Commanding: "tone-commanding",
- Brusque: "tone-brusque"
+ Blunt: "tone-blunt"
 };
 function setSample(q) {
  document.getElementById("question").value = q;
@@ -324,7 +474,7 @@ function makeTonedPrompt(question, tone) {
    return question;
  if (tone === "Commanding")
    return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
- if (tone === "Brusque")
+ if (tone === "Blunt")
    return `${question} Answer now. Be brief.`;
 }
 function similarity(a, b) {
@@ -343,6 +493,11 @@ function similarity(a, b) {
    }
  }
  return Math.round((2 * matches) / (a.length + b.length) * 100);
+}
+function simVerdict(score) {
+ if (score >= 75) return { label: "Nearly identical", cls: "sim-high" };
+ if (score >= 50) return { label: "Some variation", cls: "sim-mid" };
+ return { label: "Very different", cls: "sim-low" };
 }
 function wordCount(text) {
  return text.trim().split(/\s+/).length;
@@ -365,7 +520,7 @@ function countSyllables(word) {
  const m = word.match(/[aeiouy]{1,2}/g);
  return m ? m.length : 1;
 }
- async function callGemini(apiKey, prompt) {
+async function callGemini(apiKey, prompt) {
  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
  const body = {
    contents: [{ parts: [{ text: prompt }] }],
@@ -382,11 +537,6 @@ function countSyllables(word) {
  }
  const data = await res.json();
  return data.candidates[0].content.parts[0].text;
-}
-function simClass(score) {
- if (score >= 75) return "sim-high";
- if (score >= 50) return "sim-mid";
- return "sim-low";
 }
 async function runAnalysis() {
  const apiKey = document.getElementById("api-key").value.trim();
@@ -453,9 +603,17 @@ function renderSimilarity(results) {
    <div class="sim-card">
      <h4>vs. ${toneA}</h4>
      ${TONES.map(toneB => {
-       if (toneA === toneB) return `<div class="sim-row"><span>${toneB}</span><span class="sim-score" style="color:var(--muted)">—</span></div>`;
+       if (toneA === toneB) return `<div class="sim-row"><span class="sim-row-label">${toneB}</span><span style="color:var(--muted);font-size:13px">—</span></div>`;
        const score = similarity(results[toneA].response, results[toneB].response);
-       return `<div class="sim-row"><span>${toneB}</span><span class="sim-score ${simClass(score)}">${score}%</span></div>`;
+       const v = simVerdict(score);
+       return `
+         <div class="sim-row ${v.cls}">
+           <span class="sim-row-label">${toneB}</span>
+           <span class="sim-detail">
+             <span class="sim-pct">${score}%</span>
+             <span class="sim-verdict">${v.label}</span>
+           </span>
+         </div>`;
      }).join("")}
    </div>
  `).join("");
@@ -492,14 +650,14 @@ function renderInsights(results) {
  const highestGrade = TONES.reduce((a,b) => grades[a] > grades[b] ? a : b);
  const lowestGrade = TONES.reduce((a,b) => grades[a] < grades[b] ? a : b);
  const polNeuSim = similarity(results["Polite"].response, results["Neutral"].response);
- const polBruSim = similarity(results["Polite"].response, results["Brusque"].response);
- const supportsHypothesis = words["Polite"] > words["Brusque"];
+ const polBluSim = similarity(results["Polite"].response, results["Blunt"].response);
+ const supportsHypothesis = words["Polite"] > words["Blunt"];
  const insights = [
    `The <strong>${mostWords}</strong> tone produced the longest response (${words[mostWords]} words), while <strong>${leastWords}</strong> produced the shortest (${words[leastWords]} words) — a difference of ${words[mostWords] - words[leastWords]} words.`,
-   `The <strong>${highestGrade}</strong> tone produced the most complex response (grade ${grades[highestGrade]}), while <strong>${lowestGrade}</strong> was most readable (grade ${grades[lowestGrade]}).`,
-   `Polite vs. Neutral responses were <strong>${polNeuSim}% similar</strong> in content — ${polNeuSim > 80 ? "suggesting tone had minimal effect on the substance of the answer" : "suggesting tone meaningfully changed what was said, not just how much"}.`,
-   `Polite vs. Brusque responses were <strong>${polBruSim}% similar</strong> — the largest tone contrast tested.`,
-   `These results <strong>${supportsHypothesis ? "support" : "challenge"}</strong> Kotikela et al.'s hypothesis that polite tones elicit more thorough responses from LLMs.`
+   `The <strong>${highestGrade}</strong> tone produced the most complex response (grade ${grades[highestGrade]}), while <strong>${lowestGrade}</strong> was the most readable (grade ${grades[lowestGrade]}).`,
+   `Polite vs. Neutral responses were ${polNeuSim >= 75 ? '<strong>nearly identical</strong>' : polNeuSim >= 50 ? '<strong>somewhat different</strong>' : '<strong>very different</strong>'} (${polNeuSim}%) — ${polNeuSim > 80 ? "suggesting tone had minimal effect on the substance of the answer" : "suggesting tone meaningfully changed what was said, not just how much"}.`,
+   `Polite vs. Blunt responses were ${polBluSim >= 75 ? '<strong>nearly identical</strong>' : polBluSim >= 50 ? '<strong>somewhat different</strong>' : '<strong>very different</strong>'} (${polBluSim}%) — this is the largest tone contrast tested.`,
+   `These results <strong>${supportsHypothesis ? "suggest" : "don't clearly show"}</strong> that polite tones elicit longer, more thorough responses than blunt ones.`
  ];
  document.getElementById("insights").innerHTML = insights
    .map(i => `<div class="insight-item">${i}</div>`)
@@ -508,6 +666,3 @@ function renderInsights(results) {
 </script>
 </body>
 </html>
-
-
-
