@@ -457,7 +457,7 @@
    <div class="dot-wrap">
      <div class="dot-flashing"></div>
    </div>
-   Sending one request to Gemini (all 4 tones)...
+   Running two parallel Gemini requests (2 tones each)…
  </div>
  <div class="results" id="results">
    <div class="divider"></div>
@@ -562,27 +562,19 @@ function makeTonedPrompt(question, tone) {
  if (tone === "Blunt")
    return `${question} Answer now. Be brief.`;
 }
-/** One user message that asks for all four tone answers in a single API call (saves quota vs. 4 separate requests). */
-function buildMultiTonePrompt(question) {
- const polite = makeTonedPrompt(question, "Polite");
- const neutral = makeTonedPrompt(question, "Neutral");
- const thorough = makeTonedPrompt(question, "Thorough");
- const blunt = makeTonedPrompt(question, "Blunt");
- return `You will answer four separate user prompts. Each block is the complete user message for one tone. Answer each independently, as if you only saw that one message.
+/** One user message that asks for a subset of tone answers (used in 2 parallel calls: faster than one huge JSON, fewer quota hits than 4 calls). */
+function buildToneSubsetPrompt(question, toneKeys) {
+ const blocks = toneKeys.map(
+   t => `--- Tone "${t}" (full user message) ---\n${makeTonedPrompt(question, t)}`
+ ).join("\n\n");
+ const keyList = toneKeys.map(k => `"${k}"`).join(", ");
+ return `You will answer ${toneKeys.length} separate user prompts. Each block is the complete user message for one tone. Answer each independently, as if you only saw that one message.
 
---- Tone "Polite" (full user message) ---
-${polite}
+${blocks}
 
---- Tone "Neutral" (full user message) ---
-${neutral}
+IMPORTANT: Keep each answer informative but concise—about 3–8 sentences per tone unless the topic clearly needs more. Do not pad, repeat, or add meta-commentary.
 
---- Tone "Thorough" (full user message) ---
-${thorough}
-
---- Tone "Blunt" (full user message) ---
-${blunt}
-
-Respond with ONLY valid JSON. No markdown code fences, no text before or after the JSON. The object must have exactly these keys: "Polite", "Neutral", "Thorough", "Blunt". Each value must be your full answer string for that tone.`;
+Respond with ONLY valid JSON. No markdown code fences, no text before or after the JSON. The object must have exactly these keys: ${keyList}. Each value must be your full answer string for that tone.`;
 }
 function parseJsonFromModelText(text) {
  let t = text.trim();
@@ -596,7 +588,7 @@ function parseJsonFromModelText(text) {
  t = t.slice(start, end + 1);
  return JSON.parse(t);
 }
-function parseFourToneJson(text) {
+function parseToneJson(text, expectedKeys) {
  let obj;
  try {
    obj = parseJsonFromModelText(text);
@@ -604,7 +596,7 @@ function parseFourToneJson(text) {
    throw new Error("Could not parse the model response as JSON. Try running again.");
  }
  const out = {};
- for (const tone of TONES) {
+ for (const tone of expectedKeys) {
    const v = obj[tone];
    if (typeof v !== "string" || !String(v).trim())
      throw new Error(`Missing or empty "${tone}" in the model JSON.`);
@@ -619,9 +611,24 @@ function parseRetryDelayMs(message) {
  const m = (message || "").match(/retry in ([\d.]+)s/i);
  return m ? Math.ceil(parseFloat(m[1]) * 1000) + 400 : null;
 }
-function isRetryableQuotaError(status, message) {
+/** Do not retry — user must fix key or request. */
+function isAuthOrKeyError(status, message) {
  const msg = message || "";
- return status === 429 || /quota|rate limit|resource exhausted|too many requests/i.test(msg);
+ if (status === 401 || status === 403) return true;
+ if (
+   status === 400 &&
+   /API key|api[_ ]?key|expired|PERMISSION_DENIED|API_KEY_INVALID|invalid API key|invalid api key/i.test(msg)
+ )
+   return true;
+ return /API key expired|invalid API key|API_KEY_INVALID|PERMISSION_DENIED/i.test(msg);
+}
+/** Retry only real overload / quota — not bad keys or bad requests. */
+function isRetryableOverloadError(status, message) {
+ const msg = message || "";
+ if (isAuthOrKeyError(status, msg)) return false;
+ if (status === 429) return true;
+ if (status === 503 || status === 504) return true;
+ return /quota exceeded|rate limit|resource exhausted|unavailable|overload/i.test(msg);
 }
 function similarity(a, b) {
  const longer = a.length > b.length ? a : b;
@@ -674,43 +681,86 @@ function countSyllables(word) {
  return m ? m.length : 1;
 }
 const GEMINI_MODEL = "gemini-2.5-flash-lite";
+/** Two answers per request; parallel halves wall-clock time vs one 4-answer JSON. */
+const MAX_OUTPUT_TOKENS_PER_CHUNK = 3072;
+const FETCH_TIMEOUT_MS = 90000;
+const MAX_OVERLOAD_RETRIES = 3;
 function geminiGenerateUrl(apiKey) {
  return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 }
-/** Single request returning JSON with all four tone answers. Retries on rate/quota with server-suggested or exponential backoff. */
-async function callGeminiAllTones(apiKey, question) {
- const prompt = buildMultiTonePrompt(question);
+async function fetchWithTimeout(url, options, timeoutMs) {
+ const controller = new AbortController();
+ const id = setTimeout(() => controller.abort(), timeoutMs);
+ try {
+   return await fetch(url, { ...options, signal: controller.signal });
+ } finally {
+   clearTimeout(id);
+ }
+}
+/** One request: JSON map for the given tone keys. Fails fast on bad/expired keys; short retry loop only for overload/quota. */
+async function callGeminiJsonTones(apiKey, question, toneKeys) {
+ const prompt = buildToneSubsetPrompt(question, toneKeys);
  const body = {
    contents: [{ parts: [{ text: prompt }] }],
    generationConfig: {
-     maxOutputTokens: 8192,
+     maxOutputTokens: MAX_OUTPUT_TOKENS_PER_CHUNK,
      temperature: 0.2
    }
  };
  let lastMessage = "API error";
- for (let attempt = 0; attempt < 8; attempt++) {
-   const res = await fetch(geminiGenerateUrl(apiKey), {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify(body)
-   });
+ for (let attempt = 0; attempt <= MAX_OVERLOAD_RETRIES; attempt++) {
+   let res;
+   try {
+     res = await fetchWithTimeout(
+       geminiGenerateUrl(apiKey),
+       {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify(body)
+       },
+       FETCH_TIMEOUT_MS
+     );
+   } catch (e) {
+     if (e && e.name === "AbortError")
+       throw new Error(
+         `Request timed out after ${Math.round(FETCH_TIMEOUT_MS / 1000)}s. Try a shorter question or check your connection.`
+       );
+     throw e;
+   }
    const data = await res.json().catch(() => ({}));
    if (res.ok) {
      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
      if (!text || !String(text).trim())
        throw new Error("Empty response from Gemini. Try again.");
-     return parseFourToneJson(text);
+     return parseToneJson(text, toneKeys);
    }
    lastMessage = data.error?.message || `HTTP ${res.status}`;
-   if (isRetryableQuotaError(res.status, lastMessage) && attempt < 7) {
+   if (isAuthOrKeyError(res.status, lastMessage)) throw new Error(lastMessage);
+   if (isRetryableOverloadError(res.status, lastMessage) && attempt < MAX_OVERLOAD_RETRIES) {
      const suggested = parseRetryDelayMs(lastMessage);
-     const backoff = suggested ?? Math.min(90000, 2500 * Math.pow(2, attempt));
+     const backoff = suggested ?? Math.min(45000, 2000 * Math.pow(2, attempt));
      await sleep(backoff);
      continue;
    }
    throw new Error(lastMessage);
  }
  throw new Error(lastMessage);
+}
+/** Two parallel requests (Polite+Neutral, Thorough+Blunt): 2 quota units, typically much faster than one 4-answer generation. */
+async function callGeminiAllTones(apiKey, question) {
+ const [a, b] = await Promise.all([
+   callGeminiJsonTones(apiKey, question, ["Polite", "Neutral"]),
+   callGeminiJsonTones(apiKey, question, ["Thorough", "Blunt"])
+ ]);
+ return { ...a, ...b };
+}
+function friendlyErrorHint(msg) {
+ const m = msg || "";
+ if (/API key expired|invalid API key|API_KEY_INVALID|PERMISSION_DENIED|invalid argument.*key/i.test(m))
+   return " Create a new key at https://aistudio.google.com/apikey and paste it above.";
+ if (/quota|rate limit|resource exhausted|429/i.test(m))
+   return " If limits persist, wait a minute or check usage at https://ai.dev/rate-limit";
+ return " — double-check your API key and try again.";
 }
 async function runAnalysis() {
  const apiKey = document.getElementById("api-key").value.trim();
@@ -743,10 +793,7 @@ async function runAnalysis() {
    document.getElementById("results").classList.add("active");
  } catch (e) {
    const msg = e.message || String(e);
-   const quotaHint = /quota|rate limit|resource exhausted|429/i.test(msg)
-     ? " The app waits and retries automatically; if this still appears, pause a minute or check usage at https://ai.dev/rate-limit"
-     : " — double-check your API key and try again.";
-   showError("Error: " + msg + quotaHint);
+   showError("Error: " + msg + friendlyErrorHint(msg));
  }
  document.getElementById("run-btn").disabled = false;
  document.getElementById("spinner").classList.remove("active");
