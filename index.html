@@ -5,225 +5,509 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LLM Tone Tester — Ishani Srivastava</title>
 <style>
-  :root {
-    --bg: #f8fafc;
-    --surface: #ffffff;
-    --border: #e2e8f0; 
-    --text: #1e293b;
-    --muted: #64748b;
-    --blue: #2563eb;
-    --blue-light: #eff6ff;
-    --green: #10b981;
-    --green-light: #ecfdf5;
-    --amber: #f59e0b;
-    --amber-light: #fffbeb;
-    --red: #ef4444;
-    --red-light: #fef2f2;
-    --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.5;
-    padding: 40px 20px;
-  }
-  .container { max-width: 1000px; margin: 0 auto; }
-  .header { margin-bottom: 32px; text-align: center; }
-  .header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
-  .header p { font-size: 15px; color: var(--muted); max-width: 700px; margin: 0 auto; }
-  
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  }
-  .card-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-  
-  textarea {
-    width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 15px; background: #fdfdfd; min-height: 120px; transition: all 0.2s;
-  }
-  textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-  
-  .btn { padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-size: 14px; }
-  .btn-primary { background: var(--blue); color: white; }
-  .btn-primary:hover { background: #1d4ed8; }
-  .btn-ghost { background: #f1f5f9; color: var(--muted); margin-left: 8px; }
-  
-  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; }
-  .metric-card { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  .metric-tone { font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 12px; }
-  .tone-polite { background: var(--green-light); color: var(--green); }
-  .tone-neutral { background: var(--blue-light); color: var(--blue); }
-  .tone-commanding { background: var(--amber-light); color: var(--amber); }
-  .tone-brusque { background: var(--red-light); color: var(--red); }
-
-  .bar-bg { background: #f1f5f9; height: 6px; border-radius: 10px; margin-top: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; background: var(--blue); transition: width 0.5s ease; }
-
-  .response-section { margin-bottom: 12px; }
-  .response-toggle {
-    width: 100%; text-align: left; background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-  }
-  .response-body { display: none; background: white; border: 1px solid var(--border); border-top: none; padding: 20px; border-radius: 0 0 var(--radius) var(--radius); }
-  .response-body.open { display: block; }
-  .prompt-box { background: #f8fafc; padding: 12px; border-radius: 6px; font-size: 13px; color: #475569; margin: 10px 0; border-left: 4px solid #cbd5e1; }
-  
-  .insight-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 24px; color: #1e40af; }
-  .insight-item { margin-bottom: 10px; padding-left: 20px; position: relative; font-size: 15px; }
-  .insight-item::before { content: "•"; position: absolute; left: 0; font-weight: bold; }
-
-  .spinner { display: none; text-align: center; padding: 40px; color: var(--muted); }
-  .spinner.active { display: block; }
+ :root {
+   --bg: #f9f9f8;
+   --surface: #ffffff;
+   --border: rgba(0,0,0,0.1);
+   --text: #1a1a1a;
+   --muted: #6b6b6b;
+   --blue: #2563eb;
+   --blue-light: #eff6ff;
+   --green: #16a34a;
+   --green-light: #f0fdf4;
+   --amber: #d97706;
+   --amber-light: #fffbeb;
+   --red: #dc2626;
+   --red-light: #fef2f2;
+   --radius: 10px;
+ }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ body {
+   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   background: var(--bg);
+   color: var(--text);
+   min-height: 100vh;
+   padding: 40px 20px;
+ }
+ .container { max-width: 900px; margin: 0 auto; }
+ .header { margin-bottom: 32px; }
+ .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+ .header p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+ .tag {
+   display: inline-block;
+   background: var(--blue-light);
+   color: var(--blue);
+   font-size: 11px;
+   font-weight: 600;
+   padding: 3px 10px;
+   border-radius: 20px;
+   margin-bottom: 12px;
+   letter-spacing: .03em;
+ }
+ .card {
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   padding: 20px 24px;
+   margin-bottom: 16px;
+ }
+ .card-title {
+   font-size: 12px;
+   font-weight: 600;
+   color: var(--muted);
+   text-transform: uppercase;
+   letter-spacing: .05em;
+   margin-bottom: 12px;
+ }
+ label { font-size: 14px; color: var(--muted); display: block; margin-bottom: 6px; }
+ input[type="password"], textarea {
+   width: 100%;
+   border: 0.5px solid var(--border);
+   border-radius: 8px;
+   padding: 10px 14px;
+   font-size: 14px;
+   font-family: inherit;
+   color: var(--text);
+   background: var(--bg);
+   outline: none;
+   transition: border-color .15s;
+ }
+ input[type="password"]:focus, textarea:focus { border-color: var(--blue); }
+ textarea { min-height: 100px; resize: vertical; }
+ .btn {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   padding: 10px 22px;
+   border-radius: 8px;
+   font-size: 14px;
+   font-weight: 500;
+   cursor: pointer;
+   border: none;
+   transition: opacity .15s, transform .1s;
+ }
+ .btn:active { transform: scale(0.98); }
+ .btn-primary { background: var(--blue); color: white; }
+ .btn-primary:hover { opacity: .88; }
+ .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+ .btn-ghost {
+   background: transparent;
+   border: 0.5px solid var(--border);
+   color: var(--muted);
+ }
+ .btn-ghost:hover { background: var(--bg); }
+ .btn-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+ .samples { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+ .sample-pill {
+   padding: 5px 14px;
+   border-radius: 20px;
+   border: 0.5px solid var(--border);
+   background: transparent;
+   font-size: 12px;
+   color: var(--muted);
+   cursor: pointer;
+   font-family: inherit;
+   transition: background .12s, color .12s;
+ }
+ .sample-pill:hover { background: var(--surface); color: var(--text); }
+ .spinner {
+   display: none;
+   align-items: center;
+   gap: 10px;
+   font-size: 14px;
+   color: var(--muted);
+   padding: 16px 0;
+ }
+ .spinner.active { display: flex; }
+ .dot-flashing {
+   width: 8px; height: 8px;
+   border-radius: 50%;
+   background: var(--blue);
+   animation: dotFlash 1s infinite alternate;
+ }
+ .dot-flashing::before, .dot-flashing::after {
+   content: '';
+   display: inline-block;
+   width: 8px; height: 8px;
+   border-radius: 50%;
+   background: var(--blue);
+   position: absolute;
+   animation: dotFlash 1s infinite alternate;
+ }
+ .dot-flashing::before { left: -12px; animation-delay: -.2s; }
+ .dot-flashing::after { left: 12px; animation-delay: .2s; }
+ .dot-wrap { position: relative; width: 32px; height: 8px; }
+ @keyframes dotFlash { 0%{opacity:.2} 100%{opacity:1} }
+ .results { display: none; }
+ .results.active { display: block; }
+ .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+ @media(max-width:600px){ .metrics-grid{grid-template-columns:repeat(2,1fr);} }
+ .metric-card {
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   padding: 14px 16px;
+ }
+ .metric-tone {
+   font-size: 11px;
+   font-weight: 700;
+   letter-spacing: .05em;
+   text-transform: uppercase;
+   margin-bottom: 10px;
+   padding: 3px 10px;
+   border-radius: 20px;
+   display: inline-block;
+ }
+ .tone-polite { background: var(--green-light); color: var(--green); }
+ .tone-neutral { background: var(--blue-light); color: var(--blue); }
+ .tone-commanding { background: var(--amber-light); color: var(--amber); }
+ .tone-brusque { background: var(--red-light); color: var(--red); }
+ .metric-item { margin-bottom: 8px; }
+ .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+ .metric-value { font-size: 20px; font-weight: 600; }
+ .sim-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+ @media(max-width:600px){ .sim-grid{grid-template-columns:repeat(2,1fr);} }
+ .sim-card {
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   padding: 14px 16px;
+ }
+ .sim-card h4 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); }
+ .sim-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 0.5px solid var(--border); }
+ .sim-row:last-child { border-bottom: none; }
+ .sim-score { font-weight: 600; }
+ .sim-high { color: var(--green); }
+ .sim-mid { color: var(--amber); }
+ .sim-low { color: var(--red); }
+ .response-section { margin-bottom: 10px; }
+ .response-toggle {
+   width: 100%;
+   text-align: left;
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-radius: var(--radius);
+   padding: 14px 18px;
+   font-size: 14px;
+   font-weight: 500;
+   cursor: pointer;
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   font-family: inherit;
+   color: var(--text);
+   transition: background .12s;
+ }
+ .response-toggle:hover { background: var(--bg); }
+ .response-toggle .arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
+ .response-toggle.open .arrow { transform: rotate(180deg); }
+ .response-body {
+   display: none;
+   background: var(--surface);
+   border: 0.5px solid var(--border);
+   border-top: none;
+   border-radius: 0 0 var(--radius) var(--radius);
+   padding: 16px 18px;
+ }
+ .response-body.open { display: block; }
+ .prompt-box {
+   background: var(--bg);
+   border: 0.5px solid var(--border);
+   border-radius: 6px;
+   padding: 10px 14px;
+   font-size: 13px;
+   color: var(--muted);
+   margin-bottom: 12px;
+   line-height: 1.6;
+ }
+ .prompt-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+ .response-text { font-size: 14px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+ .insight-box {
+   background: var(--blue-light);
+   border: 0.5px solid rgba(37,99,235,.2);
+   border-radius: var(--radius);
+   padding: 18px 22px;
+ }
+ .insight-box h3 { font-size: 14px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
+ .insight-item { font-size: 14px; line-height: 1.7; color: #1e3a8a; margin-bottom: 6px; padding-left: 16px; position: relative; }
+ .insight-item::before { content: "→"; position: absolute; left: 0; color: var(--blue); font-size: 12px; top: 2px; }
+ .error-box {
+   background: var(--red-light);
+   border: 0.5px solid rgba(220,38,38,.2);
+   border-radius: var(--radius);
+   padding: 14px 18px;
+   font-size: 14px;
+   color: var(--red);
+   margin-bottom: 16px;
+   display: none;
+ }
+ .divider { height: 0.5px; background: var(--border); margin: 24px 0; }
+ .section-label { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+ .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 40px; }
 </style>
 </head>
 <body>
-
 <div class="container">
-  <div class="header">
-    <h1>LLM Tone & Impact Analysis</h1>
-    <p>Testing how conversational phrasing affects AI output depth, complexity, and fact-retention.</p>
-  </div>
-
-  <div class="card">
-    <div class="card-title">1. Setup API</div>
-    <input type="password" id="api-key" placeholder="Paste Gemini API Key here..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border);">
-  </div>
-
-  <div class="card">
-    <div class="card-title">2. Your Research Question</div>
-    <textarea id="question" placeholder="e.g., How does the immune system work?"></textarea>
-    <div style="margin-top:15px;">
-      <button class="btn btn-primary" id="run-btn" onclick="runAnalysis()">Run Comparative Analysis</button>
-      <button class="btn btn-ghost" onclick="clearAll()">Reset</button>
-    </div>
-  </div>
-
-  <div id="spinner" class="spinner">Analyzing 4 tone variations...</div>
-
-  <div id="results" style="display:none;">
-    <div class="card">
-      <div class="card-title">Findings Summary</div>
-      <div id="insights" class="insight-box"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Tone Comparison Metrics</div>
-      <div id="metrics-grid" class="metrics-grid"></div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <div class="card-title" style="margin:0;">Full Response Logs</div>
-        <button class="btn btn-ghost" onclick="toggleAll()">Expand/Collapse All</button>
-      </div>
-      <div id="responses-list"></div>
-    </div>
-  </div>
+ <div class="header">
+   <div class="tag">Research Tool</div>
+   <h1>LLM Tone & Accuracy Tester</h1>
+   <p>Does the tone of a prompt change how an AI responds? This tool empirically tests the hypothesis proposed in <em>Do LLMs Care How You Ask? Prompt Tones and AI Accuracy, Trust, and Engagement</em> (Kotikela et al., ICIS 2025) — sending the same question in four different tones and measuring the differences in response length, complexity, and similarity.</p>
+ </div>
+ <div class="card">
+   <div class="card-title">Gemini API Key</div>
+   <label>Paste your key below — it stays in your browser and is never stored or sent anywhere except Google's API.</label>
+   <input type="password" id="api-key" placeholder="AIza..." />
+ </div>
+ <div class="card">
+   <div class="card-title">Your question</div>
+   <label>Try a sample or type your own</label>
+   <div class="samples">
+     <button class="sample-pill" onclick="setSample('What causes inflation?')">What causes inflation?</button>
+     <button class="sample-pill" onclick="setSample('How does the immune system work?')">How does the immune system work?</button>
+     <button class="sample-pill" onclick="setSample('How does public key encryption work?')">How does public key encryption work?</button>
+     <button class="sample-pill" onclick="setSample('What are the pros and cons of remote work?')">Pros and cons of remote work?</button>
+     <button class="sample-pill" onclick="setSample('Explain machine learning in simple terms.')">Explain machine learning</button>
+   </div>
+   <textarea id="question" placeholder="Type any question here..."></textarea>
+   <div class="btn-row">
+     <button class="btn btn-primary" id="run-btn" onclick="runAnalysis()">Run tone analysis</button>
+     <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+   </div>
+ </div>
+ <div class="error-box" id="error-box"></div>
+ <div class="spinner" id="spinner">
+   <div class="dot-wrap">
+     <div class="dot-flashing"></div>
+   </div>
+   Sending all 4 tone variations to Gemini Pro...
+ </div>
+ <div class="results" id="results">
+   <div class="divider"></div>
+   <div class="section-label">Response metrics by tone</div>
+   <div class="metrics-grid" id="metrics-grid"></div>
+   <div class="divider"></div>
+   <div class="section-label">Similarity between tone responses (%)</div>
+   <p style="font-size:13px;color:var(--muted);margin-bottom:14px">100% = identical answers. Lower % = tone changed the response more significantly.</p>
+   <div class="sim-grid" id="sim-grid"></div>
+   <div class="divider"></div>
+   <div class="section-label">Full responses by tone</div>
+   <div id="responses-list"></div>
+   <div class="divider"></div>
+   <div class="section-label">What does this show?</div>
+   <div class="insight-box">
+     <h3>Findings for this question</h3>
+     <div id="insights"></div>
+   </div>
+ </div>
+ <div class="footer">Built by Ishani Srivastava &nbsp;·&nbsp; Empirical extension of Kotikela et al. (ICIS 2025)</div>
 </div>
-
 <script>
 const TONES = ["Polite", "Neutral", "Commanding", "Brusque"];
-const TONE_CLASSES = { Polite: "tone-polite", Neutral: "tone-neutral", Commanding: "tone-commanding", Brusque: "tone-brusque" };
-
-function clearAll() { location.reload(); }
-
-function makeTonedPrompt(q, tone) {
-  if (tone === "Polite") return `Could you please help me with the following? I would really appreciate your assistance. ${q} Thank you so much!`;
-  if (tone === "Neutral") return q;
-  if (tone === "Commanding") return `Answer the following question thoroughly and completely. ${q} Provide a detailed response.`;
-  return `${q} Answer now. Be brief.`;
+const TONE_COLORS = {
+ Polite: "tone-polite",
+ Neutral: "tone-neutral",
+ Commanding: "tone-commanding",
+ Brusque: "tone-brusque"
+};
+function setSample(q) {
+ document.getElementById("question").value = q;
 }
-
-async function callGemini(apiKey, prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 2048, temperature: 0.7 } })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || "API Error");
-  return data.candidates[0].content.parts[0].text;
+function clearAll() {
+ document.getElementById("question").value = "";
+ document.getElementById("results").classList.remove("active");
+ document.getElementById("error-box").style.display = "none";
 }
-
-function getStats(text) {
-  const words = text.trim().split(/\s+/).length;
-  const sentences = (text.match(/[.!?]+/g) || []).length || 1;
-  // Simple reading grade estimation
-  const grade = Math.round((0.39 * (words/sentences) + 10) * 10) / 10;
-  return { words, sentences, grade };
+function makeTonedPrompt(question, tone) {
+ if (tone === "Polite")
+   return `Could you please help me with the following? I would really appreciate your assistance. ${question} Thank you so much!`;
+ if (tone === "Neutral")
+   return question;
+ if (tone === "Commanding")
+   return `Answer the following question thoroughly and completely. ${question} Provide a detailed response.`;
+ if (tone === "Brusque")
+   return `${question} Answer now. Be brief.`;
 }
-
+function similarity(a, b) {
+ const longer = a.length > b.length ? a : b;
+ const shorter = a.length > b.length ? b : a;
+ if (longer.length === 0) return 100;
+ let matches = 0;
+ const used = new Array(longer.length).fill(false);
+ for (let i = 0; i < shorter.length; i++) {
+   for (let j = 0; j < longer.length; j++) {
+     if (!used[j] && shorter[i] === longer[j]) {
+       matches++;
+       used[j] = true;
+       break;
+     }
+   }
+ }
+ return Math.round((2 * matches) / (a.length + b.length) * 100);
+}
+function wordCount(text) {
+ return text.trim().split(/\s+/).length;
+}
+function sentenceCount(text) {
+ return (text.match(/[.!?]+/g) || []).length || 1;
+}
+function readingGrade(text) {
+ const words = text.trim().split(/\s+/);
+ const sentences = sentenceCount(text);
+ const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+ const fkgl = 0.39 * (words.length / sentences) + 11.8 * (syllables / words.length) - 15.59;
+ return Math.max(1, Math.round(fkgl * 10) / 10);
+}
+function countSyllables(word) {
+ word = word.toLowerCase().replace(/[^a-z]/g, "");
+ if (word.length <= 3) return 1;
+ word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
+ word = word.replace(/^y/, "");
+ const m = word.match(/[aeiouy]{1,2}/g);
+ return m ? m.length : 1;
+}
+ async function callGemini(apiKey, prompt) {
+ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+ const body = {
+   contents: [{ parts: [{ text: prompt }] }],
+   generationConfig: { maxOutputTokens: 2048 }
+ };
+ const res = await fetch(url, {
+   method: "POST",
+   headers: { "Content-Type": "application/json" },
+   body: JSON.stringify(body)
+ });
+ if (!res.ok) {
+   const err = await res.json();
+   throw new Error(err.error?.message || "API error");
+ }
+ const data = await res.json();
+ return data.candidates[0].content.parts[0].text;
+}
+function simClass(score) {
+ if (score >= 75) return "sim-high";
+ if (score >= 50) return "sim-mid";
+ return "sim-low";
+}
 async function runAnalysis() {
-  const key = document.getElementById("api-key").value;
-  const q = document.getElementById("question").value;
-  if(!key || !q) return alert("Please provide both API key and a question.");
-
-  document.getElementById("spinner").classList.add("active");
-  document.getElementById("run-btn").disabled = true;
-
-  try {
-    const data = {};
-    for (const t of TONES) {
-      const resp = await callGemini(key, makeTonedPrompt(q, t));
-      data[t] = { response: resp, prompt: makeTonedPrompt(q, t), ...getStats(resp) };
-    }
-    renderUI(data);
-  } catch (e) { alert(e.message); }
-  
-  document.getElementById("spinner").classList.remove("active");
-  document.getElementById("run-btn").disabled = false;
+ const apiKey = document.getElementById("api-key").value.trim();
+ const question = document.getElementById("question").value.trim();
+ const errBox = document.getElementById("error-box");
+ errBox.style.display = "none";
+ if (!apiKey) { showError("Please paste your Gemini API key above."); return; }
+ if (!question) { showError("Please enter a question."); return; }
+ document.getElementById("run-btn").disabled = true;
+ document.getElementById("spinner").classList.add("active");
+ document.getElementById("results").classList.remove("active");
+ try {
+   const results = {};
+   for (const tone of TONES) {
+     const prompt = makeTonedPrompt(question, tone);
+     const response = await callGemini(apiKey, prompt);
+     results[tone] = {
+       prompt,
+       response,
+       words: wordCount(response),
+       grade: readingGrade(response),
+       sentences: sentenceCount(response)
+     };
+   }
+   renderMetrics(results);
+   renderSimilarity(results);
+   renderResponses(results);
+   renderInsights(results);
+   document.getElementById("results").classList.add("active");
+ } catch (e) {
+   showError("Error: " + e.message + " — double-check your API key and try again.");
+ }
+ document.getElementById("run-btn").disabled = false;
+ document.getElementById("spinner").classList.remove("active");
 }
-
-function renderUI(data) {
-  document.getElementById("results").style.display = "block";
-  
-  // Render Metrics
-  const maxWords = Math.max(...TONES.map(t => data[t].words));
-  document.getElementById("metrics-grid").innerHTML = TONES.map(t => `
-    <div class="metric-card">
-      <div class="metric-tone ${TONE_CLASSES[t]}">${t}</div>
-      <div style="font-size:12px; color:var(--muted)">Word Count: <b>${data[t].words}</b></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${(data[t].words/maxWords)*100}%"></div></div>
-      <div style="font-size:12px; color:var(--muted); margin-top:10px;">Complexity (Grade): <b>${data[t].grade}</b></div>
-    </div>
-  `).join("");
-
-  // Render Findings
-  const longest = TONES.reduce((a, b) => data[a].words > data[b].words ? a : b);
-  document.getElementById("insights").innerHTML = `
-    <div class="insight-item">The <b>${longest}</b> tone prompted the AI to be most descriptive.</div>
-    <div class="insight-item">The <b>Brusque</b> tone had ${Math.round((1 - data["Brusque"].words / data["Polite"].words) * 100)}% less information than the Polite tone.</div>
-    <div class="insight-item">A higher Complexity Grade (like <b>${data[TONES.reduce((a,b)=>data[a].grade > data[b].grade?a:b)].grade}</b>) indicates the AI used more technical, academic language.</div>
-  `;
-
-  // Render Responses
-  document.getElementById("responses-list").innerHTML = TONES.map(t => `
-    <div class="response-section">
-      <div class="response-toggle" onclick="this.nextElementSibling.classList.toggle('open')">
-        <span><b>${t} Response</b> (${data[t].words} words)</span>
-        <span>▼</span>
-      </div>
-      <div class="response-body">
-        <div style="font-weight:700; font-size:11px; color:var(--muted); text-transform:uppercase;">Prompt Logic</div>
-        <div class="prompt-box">${data[t].prompt}</div>
-        <div style="font-weight:700; font-size:11px; color:var(--muted); text-transform:uppercase;">AI Output</div>
-        <div style="font-size:14px; white-space:pre-wrap; margin-top:10px;">${data[t].response}</div>
-      </div>
-    </div>
-  `).join("");
+function showError(msg) {
+ const b = document.getElementById("error-box");
+ b.textContent = msg;
+ b.style.display = "block";
 }
-
-function toggleAll() {
-  const bodies = document.querySelectorAll('.response-body');
-  const isOpen = bodies[0].classList.contains('open');
-  bodies.forEach(b => isOpen ? b.classList.remove('open') : b.classList.add('open'));
+function renderMetrics(results) {
+ const grid = document.getElementById("metrics-grid");
+ grid.innerHTML = TONES.map(tone => `
+   <div class="metric-card">
+     <div class="metric-tone ${TONE_COLORS[tone]}">${tone}</div>
+     <div class="metric-item">
+       <div class="metric-label">Word count</div>
+       <div class="metric-value">${results[tone].words}</div>
+     </div>
+     <div class="metric-item">
+       <div class="metric-label">Reading grade</div>
+       <div class="metric-value">${results[tone].grade}</div>
+     </div>
+     <div class="metric-item">
+       <div class="metric-label">Sentences</div>
+       <div class="metric-value">${results[tone].sentences}</div>
+     </div>
+   </div>
+ `).join("");
+}
+function renderSimilarity(results) {
+ const grid = document.getElementById("sim-grid");
+ grid.innerHTML = TONES.map(toneA => `
+   <div class="sim-card">
+     <h4>vs. ${toneA}</h4>
+     ${TONES.map(toneB => {
+       if (toneA === toneB) return `<div class="sim-row"><span>${toneB}</span><span class="sim-score" style="color:var(--muted)">—</span></div>`;
+       const score = similarity(results[toneA].response, results[toneB].response);
+       return `<div class="sim-row"><span>${toneB}</span><span class="sim-score ${simClass(score)}">${score}%</span></div>`;
+     }).join("")}
+   </div>
+ `).join("");
+}
+function renderResponses(results) {
+ const list = document.getElementById("responses-list");
+ list.innerHTML = TONES.map(tone => `
+   <div class="response-section">
+     <button class="response-toggle" onclick="toggleResponse(this)">
+       <span><span class="metric-tone ${TONE_COLORS[tone]}" style="margin-right:10px">${tone}</span>${results[tone].words} words &nbsp;·&nbsp; grade ${results[tone].grade}</span>
+       <span class="arrow">▼</span>
+     </button>
+     <div class="response-body">
+       <div class="prompt-label">Prompt sent</div>
+       <div class="prompt-box">${escHtml(results[tone].prompt)}</div>
+       <div class="prompt-label">Gemini's response</div>
+       <div class="response-text">${escHtml(results[tone].response)}</div>
+     </div>
+   </div>
+ `).join("");
+}
+function toggleResponse(btn) {
+ btn.classList.toggle("open");
+ btn.nextElementSibling.classList.toggle("open");
+}
+function escHtml(str) {
+ return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function renderInsights(results) {
+ const words = Object.fromEntries(TONES.map(t => [t, results[t].words]));
+ const grades = Object.fromEntries(TONES.map(t => [t, results[t].grade]));
+ const mostWords = TONES.reduce((a,b) => words[a] > words[b] ? a : b);
+ const leastWords = TONES.reduce((a,b) => words[a] < words[b] ? a : b);
+ const highestGrade = TONES.reduce((a,b) => grades[a] > grades[b] ? a : b);
+ const lowestGrade = TONES.reduce((a,b) => grades[a] < grades[b] ? a : b);
+ const polNeuSim = similarity(results["Polite"].response, results["Neutral"].response);
+ const polBruSim = similarity(results["Polite"].response, results["Brusque"].response);
+ const supportsHypothesis = words["Polite"] > words["Brusque"];
+ const insights = [
+   `The <strong>${mostWords}</strong> tone produced the longest response (${words[mostWords]} words), while <strong>${leastWords}</strong> produced the shortest (${words[leastWords]} words) — a difference of ${words[mostWords] - words[leastWords]} words.`,
+   `The <strong>${highestGrade}</strong> tone produced the most complex response (grade ${grades[highestGrade]}), while <strong>${lowestGrade}</strong> was most readable (grade ${grades[lowestGrade]}).`,
+   `Polite vs. Neutral responses were <strong>${polNeuSim}% similar</strong> in content — ${polNeuSim > 80 ? "suggesting tone had minimal effect on the substance of the answer" : "suggesting tone meaningfully changed what was said, not just how much"}.`,
+   `Polite vs. Brusque responses were <strong>${polBruSim}% similar</strong> — the largest tone contrast tested.`,
+   `These results <strong>${supportsHypothesis ? "support" : "challenge"}</strong> Kotikela et al.'s hypothesis that polite tones elicit more thorough responses from LLMs.`
+ ];
+ document.getElementById("insights").innerHTML = insights
+   .map(i => `<div class="insight-item">${i}</div>`)
+   .join("");
 }
 </script>
 </body>
 </html>
+
+
+
